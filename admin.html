@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Check Point - Administração</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⏰</text></svg>">
+</head>
+<body>
+    <div class="dashboard">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h2>⏰ Check Point</h2>
+                <p>Sistema de Ponto</p>
+            </div>
+            
+            <div class="user-info">
+                <div class="user-avatar" id="adminAvatar">AD</div>
+                <div style="min-width: 0; overflow: hidden;">
+                    <strong id="adminName" style="white-space: normal; word-wrap: break-word; display: block;">Administrador</strong>
+                    <p style="white-space: normal; word-wrap: break-word;">Administrador</p>
+                </div>
+            </div>
+            
+            <ul class="nav-menu">
+                <li><a href="#" data-page="dashboard" class="active">📊 Dashboard</a></li>
+                <li><a href="#" data-page="workers">👥 Trabalhadores</a></li>
+                <li><a href="#" data-page="schedules">🕐 Horários</a></li>
+                <li><a href="#" data-page="registries">📝 Registos</a></li>
+                <li><a href="#" data-page="reports">📋 Relatórios</a></li>
+                <li><a href="#" data-page="backup">💾 Backup</a></li>
+            </ul>
+            
+            <div style="margin-top: 20px; padding: 15px; background: rgba(255,255,255,0.1); border-radius: var(--border-radius);">
+                <button id="btnLogout" class="btn btn-danger btn-small" style="width: 100%;">🚪 Sair</button>
+            </div>
+        </div>
+        
+        <!-- Conteúdo Principal -->
+        <div class="main-content">
+            <!-- Dashboard Section -->
+            <div id="dashboard" class="content-section">
+                <div class="header">
+                    <h1>Dashboard Administrativo</h1>
+                </div>
+                
+                <div class="cards-grid">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Total de Trabalhadores</h3>
+                            <div class="card-icon">👥</div>
+                        </div>
+                        <div class="card-body">
+                            <p class="stat-number" id="statsTotalWorkers">0</p>
+                            <p class="stat-info">Ativos: <span id="statsActiveWorkers">0</span></p>
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Registos Hoje</h3>
+                            <div class="card-icon">📝</div>
+                        </div>
+                        <div class="card-body">
+                            <p class="stat-number" id="statsTodayRegistries">0</p>
+                            <p class="stat-info">Horas totais: <span id="statsTotalHours">0</span>h</p>
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Banco de Horas</h3>
+                            <div class="card-icon">💰</div>
+                        </div>
+                        <div class="card-body">
+                            <p class="stat-number" id="statsBankHours">0</p>
+                            <p class="stat-info">Valor: <span id="statsBankValue">0</span>€</p>
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Registos Pendentes</h3>
+                            <div class="card-icon">⏳</div>
+                        </div>
+                        <div class="card-body">
+                            <p class="stat-number" id="statsPendingRegistries">0</p>
+                            <p class="stat-info">Verificar registos</p>
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Faltas Justificadas</h3>
+                            <div class="card-icon">🏥</div>
+                        </div>
+                        <div class="card-body">
+                            <p class="stat-number" id="statsJustifiedAbsence">0</p>
+                            <p class="stat-info">Horas: <span id="statsJustifiedHours">0</span>h</p>
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Horas de Férias</h3>
+                            <div class="card-icon">🏖️</div>
+                        </div>
+                        <div class="card-body">
+                            <p class="stat-number" id="statsVacationHours">0</p>
+                            <p class="stat-info">Valor: <span id="statsVacationValue">0</span>€</p>
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Horas de Formação</h3>
+                            <div class="card-icon">🎓</div>
+                        </div>
+                        <div class="card-body">
+                            <p class="stat-number" id="statsTrainingHours">0</p>
+                            <p class="stat-info">Valor: <span id="statsTrainingValue">0</span>€</p>
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Faltas Injustificadas</h3>
+                            <div class="card-icon">⚠️</div>
+                        </div>
+                        <div class="card-body">
+                            <p class="stat-number" id="statsUnjustifiedAbsence">0</p>
+                            <p class="stat-info">Valor: <span id="statsUnjustifiedValue">0</span>€</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="filter-group" style="margin-top: 30px; margin-bottom: 15px;">
+                    <div>
+                        <label>Período:</label>
+                        <select id="filterPeriod" class="filter-select">
+                            <option value="today">Hoje</option>
+                            <option value="week">Esta Semana</option>
+                            <option value="month">Este Mês</option>
+                            <option value="all">Todos</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>Trabalhador:</label>
+                        <select id="filterWorker" class="filter-select">
+                            <option value="all">Todos</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>Tipo de Registo:</label>
+                        <select id="filterType" class="filter-select">
+                            <option value="all">Todos</option>
+                            <option value="in">Entrada</option>
+                            <option value="out">Saída</option>
+                            <option value="break_start">Início Pausa</option>
+                            <option value="break_end">Fim Pausa</option>
+                            <option value="justified">Falta Justificada</option>
+                            <option value="vacation">Férias</option>
+                            <option value="training">Formação</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>Ordenar por:</label>
+                        <select id="filterSort" class="filter-select">
+                            <option value="oldest">Mais Antigo</option>
+                            <option value="newest">Mais Recente</option>
+                        </select>
+                    </div>
+                    <button id="btnApplyFilters" class="btn btn-primary">🔍 Aplicar Filtros</button>
+                </div>
+                
+                <div class="table-container">
+                    <h3>Últimos Registos</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Trabalhador</th>
+                                <th>Horário</th>
+                                <th>Tipo</th>
+                                <th>Data/Hora</th>
+                                <th>Duração (h)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="lastRegistriesList">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- Workers Section - CORRIGIDO: Adicionada gestão de funções -->
+            <div id="workers" class="content-section" style="display: none;">
+                <div class="header">
+                    <h1>Gestão de Trabalhadores</h1>
+                    <div style="display: flex; gap: 10px;">
+                        <button id="btnManageRoles" class="btn btn-secondary">⚙️ Gerir Funções</button>
+                        <button id="btnAddWorker" class="btn btn-primary">➕ Adicionar Trabalhador</button>
+                    </div>
+                </div>
+                
+                <div class="filter-group" style="margin-bottom: 20px;">
+                    <div>
+                        <label>Função:</label>
+                        <select id="filterRole" class="filter-select">
+                            <option value="all">Todas</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>Estado:</label>
+                        <select id="filterActive" class="filter-select">
+                            <option value="all">Todos</option>
+                            <option value="active">Ativos</option>
+                            <option value="inactive">Inativos</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>Ordenar por:</label>
+                        <select id="filterSortWorkers" class="filter-select">
+                            <option value="name">Nome</option>
+                            <option value="role">Função</option>
+                            <option value="active">Estado</option>
+                        </select>
+                    </div>
+                    <button id="btnFilterWorkers" class="btn btn-secondary">🔍 Filtrar</button>
+                </div>
+                
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Nome</th>
+                                <th>Função</th>
+                                <th>Custo/Hora</th>
+                                <th>PIN</th>
+                                <th>Estado</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="workersList">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- Schedules Section -->
+            <div id="schedules" class="content-section" style="display: none;">
+                <div class="header">
+                    <h1>Horários de Trabalho por Semana</h1>
+                    <button id="btnManageTemplates" class="btn btn-secondary">📋 Gerir Horários Predefinidos</button>
+                </div>
+                
+                <div class="filter-group" style="margin-bottom: 20px;">
+                    <div>
+                        <label>Trabalhador:</label>
+                        <select id="scheduleWorker" class="filter-select">
+                            <option value="">Selecione um trabalhador</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div id="scheduleEditor" style="display: none;">
+                </div>
+                
+                <div class="table-container">
+                    <h3>Trabalhadores e Horários Atribuídos</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Trabalhador</th>
+                                <th>Semanas com Horário</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="schedulesList">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- Registries Section -->
+            <div id="registries" class="content-section" style="display: none;">
+                <div class="header">
+                    <h1>Registos Administrativos</h1>
+                    <button id="btnAddRegistry" class="btn btn-primary">➕ Adicionar Registo</button>
+                </div>
+                
+                <div class="filter-group" style="margin-bottom: 20px;">
+                    <div>
+                        <label>Trabalhador:</label>
+                        <select id="registryWorker" class="filter-select">
+                            <option value="all">Todos os Trabalhadores</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>Tipo de Registo:</label>
+                        <select id="registryType" class="filter-select">
+                            <option value="justified">Falta Justificada</option>
+                            <option value="vacation">Férias</option>
+                            <option value="training">Formação</option>
+                            <option value="unjustified">Falta Injustificada</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>Data:</label>
+                        <input type="date" id="registryDate" class="filter-select" value="">
+                    </div>
+                    <div>
+                        <label>Horas:</label>
+                        <input type="number" id="registryHours" class="filter-select" step="0.5" min="0" value="8" placeholder="Horas">
+                    </div>
+                    <button id="btnSaveRegistry" class="btn btn-primary">💾 Registar</button>
+                </div>
+                
+                <div class="table-container">
+                    <h3>Registos Administrativos</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Data</th>
+                                <th>Trabalhador</th>
+                                <th>Tipo</th>
+                                <th>Horas</th>
+                                <th>Valor (€)</th>
+                                <th>Observações</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="adminRegistriesList">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- Reports Section -->
+            <div id="reports" class="content-section" style="display: none;">
+                <div class="header">
+                    <h1>Relatórios</h1>
+                    <button id="btnGenerateReport" class="btn btn-primary">📄 Gerar Relatório</button>
+                </div>
+                
+                <div class="report-filters">
+                    <div class="filter-group">
+                        <div>
+                            <label>Trabalhador:</label>
+                            <select id="reportWorker" class="filter-select">
+                                <option value="all">Todos os Trabalhadores</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label>Mês:</label>
+                            <select id="reportMonth" class="filter-select">
+                                <option value="1">Janeiro</option>
+                                <option value="2">Fevereiro</option>
+                                <option value="3">Março</option>
+                                <option value="4">Abril</option>
+                                <option value="5">Maio</option>
+                                <option value="6">Junho</option>
+                                <option value="7">Julho</option>
+                                <option value="8">Agosto</option>
+                                <option value="9">Setembro</option>
+                                <option value="10">Outubro</option>
+                                <option value="11">Novembro</option>
+                                <option value="12">Dezembro</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label>Ano:</label>
+                            <select id="reportYear" class="filter-select">
+                                <option value="2024">2024</option>
+                                <option value="2025">2025</option>
+                                <option value="2026">2026</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label>Tipo de Registo:</label>
+                            <select id="reportTypeFilter" class="filter-select">
+                                <option value="all">Todos os Tipos</option>
+                                <option value="worked">Horas Trabalhadas</option>
+                                <option value="justified">Faltas Justificadas</option>
+                                <option value="vacation">Férias</option>
+                                <option value="training">Formação</option>
+                                <option value="unjustified">Faltas Injustificadas</option>
+                                <option value="bank">Banco de Horas</option>
+                            </select>
+                        </div>
+                        <button id="btnGenerateReportFilter" class="btn btn-secondary">🔍 Gerar</button>
+                        <button id="btnExportReportExcel" class="btn btn-success">📊 Exportar Excel</button>
+                        <button id="btnExportReportPDF" class="btn btn-danger">📄 Exportar PDF</button>
+                    </div>
+                </div>
+                
+                <div id="reportResults">
+                </div>
+                
+                <div class="table-container" style="margin-top: 30px;">
+                    <h3>Relatórios Gerados</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Trabalhador</th>
+                                <th>Período</th>
+                                <th>Horas Ref.</th>
+                                <th>Horas Trab.</th>
+                                <th>Faltas Just.</th>
+                                <th>Férias</th>
+                                <th>Formação</th>
+                                <th>Faltas Injust.</th>
+                                <th>Banco Horas</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="reportsList">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- Backup Section -->
+            <div id="backup" class="content-section" style="display: none;">
+                <div class="header">
+                    <h1>Backup e Restauro</h1>
+                </div>
+                
+                <div class="cards-grid">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Exportar Dados</h3>
+                            <div class="card-icon">📤</div>
+                        </div>
+                        <div class="card-body">
+                            <p>Exporte todos os dados para um arquivo Excel ou PDF.</p>
+                            <button id="btnExportBackupExcel" class="btn btn-primary" style="margin-top: 10px; margin-bottom: 5px;">📥 Exportar Excel</button>
+                            <button id="btnExportBackupPDF" class="btn btn-danger" style="margin-top: 5px;">📄 Exportar PDF</button>
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Importar Dados</h3>
+                            <div class="card-icon">📥</div>
+                        </div>
+                        <div class="card-body">
+                            <p>Importe dados de um backup anterior (Excel).</p>
+                            <p><small><strong>Atenção:</strong> Substituirá todos os dados atuais!</small></p>
+                            <button id="btnImportBackup" class="btn btn-warning" style="margin-top: 15px;">📤 Importar Backup</button>
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Backup Automático</h3>
+                            <div class="card-icon">📧</div>
+                        </div>
+                        <div class="card-body">
+                            <div id="autoBackupStatus" style="margin-bottom: 15px;">
+                                <p><strong>Estado:</strong> <span id="backupStatusText">Desativado</span></p>
+                                <p><strong>Último envio:</strong> <span id="lastAutoBackup">Nunca</span></p>
+                                <p><strong>Próximo envio:</strong> <span id="nextAutoBackup">-</span></p>
+                            </div>
+                            <button id="btnConfigureAutoBackup" class="btn btn-info" style="margin-top: 10px; width: 100%;">⚙️ Configurar Backup Automático</button>
+                            <button id="btnTestEmailBackup" class="btn btn-secondary" style="margin-top: 10px; width: 100%;">📧 Testar Envio por Email</button>
+                            <button id="btnManualEmailBackup" class="btn btn-success" style="margin-top: 10px; width: 100%;">📨 Enviar Backup Agora</button>
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Estatísticas</h3>
+                            <div class="card-icon">📊</div>
+                        </div>
+                        <div class="card-body">
+                            <p>Trabalhadores: <span id="backupWorkersCount">0</span></p>
+                            <p>Registos: <span id="backupRegistriesCount">0</span></p>
+                            <p>Registos Admin: <span id="backupAdminRegistriesCount">0</span></p>
+                            <p>Relatórios: <span id="backupReportsCount">0</span></p>
+                            <p>Backups Automáticos: <span id="autoBackupCount">0</span></p>
+                            <p>Último Backup: <span id="lastBackupDate">Nunca</span></p>
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Limpar Dados</h3>
+                            <div class="card-icon">🗑️</div>
+                        </div>
+                        <div class="card-body">
+                            <p>Limpe todos os dados do sistema.</p>
+                            <p><small><strong>Atenção:</strong> Esta ação não pode ser desfeita!</small></p>
+                            <button id="btnClearData" class="btn btn-danger" style="margin-top: 15px;">⚠️ Limpar Tudo</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal Container -->
+    <div id="modalContainer"></div>
+    
+    <!-- QR Code Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <!-- SheetJS para Excel -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- jsPDF para PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    <!-- EmailJS para envio de emails -->
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+    <script>
+        (function(){
+            const emailjsUserId = localStorage.getItem('ponto_emailjs_user_id');
+            if (emailjsUserId) {
+                emailjs.init(emailjsUserId);
+                window.emailjsInitialized = true;
+            }
+        })();
+    </script>
+    
+    <script src="app.js"></script>
+    <script src="admin.js"></script>
+    <script src="backup-auto.js"></script>
+</body>
+</html>

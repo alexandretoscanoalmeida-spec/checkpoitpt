@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Check Point - Trabalhador</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⏰</text></svg">
+    <style>
+        /* Estilos críticos para correção dos botões */
+        .content-section {
+            display: none;
+            padding: 20px;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        .content-section.active {
+            display: block;
+        }
+        
+        .nav-link {
+            display: block;
+            padding: 12px 15px;
+            margin: 5px 0;
+            text-decoration: none;
+            color: #333;
+            background: #f5f5f5;
+            border-radius: 5px;
+            transition: all 0.3s ease;
+        }
+        
+        .nav-link:hover {
+            background: #e0e0e0;
+            transform: translateX(5px);
+        }
+        
+        .nav-link.active {
+            background: #3498db;
+            color: white;
+            font-weight: bold;
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary {
+            background: #3498db;
+            color: white;
+        }
+        
+        .btn-warning {
+            background: #f39c12;
+            color: white;
+        }
+        
+        .btn-danger {
+            background: #e74c3c;
+            color: white;
+        }
+        
+        .btn-secondary {
+            background: #95a5a6;
+            color: white;
+        }
+        
+        .btn-small {
+            padding: 8px 15px;
+            font-size: 14px;
+        }
+        
+        .btn:hover {
+            opacity: 0.9;
+            transform: translateY(-2px);
+        }
+        
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        @keyframes slideOut {
+            from { transform: translateX(0); opacity: 1; }
+            to { transform: translateX(100%); opacity: 0; }
+        }
+        
+        .status-badge {
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        .status-ok {
+            background: #2ecc71;
+            color: white;
+        }
+        
+        .status-warning {
+            background: #e67e22;
+            color: white;
+        }
+        
+        .text-center {
+            text-align: center;
+        }
+        
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            border-radius: 8px;
+            color: white;
+            font-weight: bold;
+            z-index: 10000;
+            animation: slideIn 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        
+        /* CORREÇÃO: Estilos para valores negativos */
+        .negative-value {
+            color: #e74c3c !important;
+            font-weight: bold !important;
+        }
+        
+        .stat-number.negative {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h2>⏰ Check Point</h2>
+                <p>Sistema de Ponto</p>
+            </div>
+            
+            <div class="user-info">
+                <div class="user-avatar" id="workerAvatar">TS</div>
+                <div>
+                    <strong id="workerName">Trabalhador</strong>
+                    <p id="workerRole">Função</p>
+                </div>
+            </div>
+            
+            <!-- MENU DE NAVEGAÇÃO COM OS 4 BOTÕES -->
+            <ul class="nav-menu">
+                <li><a href="#" data-page="ponto" class="nav-link active">🕐 Marcar Ponto</a></li>
+                <li><a href="#" data-page="registos" class="nav-link">📝 Meus Registos</a></li>
+                <li><a href="#" data-page="horario" class="nav-link">📅 Meu Horário</a></li>
+                <li><a href="#" data-page="bancohoras" class="nav-link">💰 Banco de Horas</a></li>
+            </ul>
+            
+            <!-- BOTÃO SAIR - IGUAL AO ADMIN -->
+            <div style="margin-top: 20px; padding: 15px; background: rgba(255,255,255,0.1); border-radius: var(--border-radius);">
+                <button id="btnLogout" class="btn btn-danger btn-small" style="width: 100%;">🚪 Sair</button>
+            </div>
+        </div>
+        
+        <!-- Conteúdo Principal -->
+        <div class="main-content">
+            <!-- Ponto Section -->
+            <div id="ponto" class="content-section active">
+                <div class="header">
+                    <h1>Marcar Ponto</h1>
+                </div>
+                
+                <div class="clock-section">
+                    <div class="clock-date" id="currentDate">Segunda-feira, 1 de Janeiro de 2024</div>
+                    <div class="clock-time" id="currentTime">00:00:00</div>
+                    
+                    <div class="clock-buttons">
+                        <button id="btnIn" class="btn btn-primary clock-btn">✅ Entrada</button>
+                        <button id="btnBreakStart" class="btn btn-warning clock-btn">☕ Início Pausa</button>
+                        <button id="btnBreakEnd" class="btn btn-warning clock-btn">↩️ Fim Pausa</button>
+                        <button id="btnOut" class="btn btn-danger clock-btn">🚪 Saída</button>
+                    </div>
+                    
+                    <div class="qr-display">
+                        <button id="btnViewQR" class="btn btn-secondary">📱 Ver Meu QR Code</button>
+                        <div id="qrcodeContainer" style="margin-top: 20px; display: none;"></div>
+                    </div>
+                </div>
+                
+                <div class="table-container" style="margin-top: 30px;">
+                    <h3>Registos de Hoje</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Tipo</th>
+                                <th>Hora</th>
+                                <th>Horas Trabalhadas</th>
+                            </tr>
+                        </thead>
+                        <tbody id="todayRegistries">
+                            <tr><td colspan="3" class="text-center">Nenhum registro hoje</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- Registos Section -->
+            <div id="registos" class="content-section">
+                <div class="header">
+                    <h1>Meus Registos</h1>
+                    <div class="filter-group">
+                        <select id="filterMonth" class="filter-select">
+                            <option value="0">Todos os meses</option>
+                        </select>
+                        <select id="filterYear" class="filter-select">
+                        </select>
+                        <button id="btnFilterRegistries" class="btn btn-secondary">🔍 Filtrar</button>
+                    </div>
+                </div>
+                
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Data</th>
+                                <th>Entrada</th>
+                                <th>Início Pausa</th>
+                                <th>Fim Pausa</th>
+                                <th>Saída</th>
+                                <th>Horas</th>
+                                <th>Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody id="allRegistries">
+                            <tr><td colspan="7" class="text-center">Nenhum registro encontrado</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="cards-grid" style="margin-top: 30px;">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Total de Horas</h3>
+                            <div class="card-icon">⏱️</div>
+                        </div>
+                        <div class="card-body">
+                            <p class="stat-number" id="totalHours">0h</p>
+                            <p class="stat-info" id="totalHoursPeriod">Este mês</p>
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Dias Trabalhados</h3>
+                            <div class="card-icon">📅</div>
+                        </div>
+                        <div class="card-body">
+                            <p class="stat-number" id="workedDays">0</p>
+                            <p class="stat-info" id="workedDaysPeriod">Este mês</p>
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Média Diária</h3>
+                            <div class="card-icon">📊</div>
+                        </div>
+                        <div class="card-body">
+                            <p class="stat-number" id="averageHours">0h</p>
+                            <p class="stat-info">Por dia útil</p>
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Último Registo</h3>
+                            <div class="card-icon">🕐</div>
+                        </div>
+                        <div class="card-body">
+                            <p class="stat-number" id="lastRegistry">-</p>
+                            <p class="stat-info">Data e hora</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Horário Section -->
+            <div id="horario" class="content-section">
+                <div class="header">
+                    <h1>Meu Horário</h1>
+                </div>
+                <div id="horarioContent">
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Dia</th>
+                                    <th>Entrada</th>
+                                    <th>Saída</th>
+                                    <th>Pausa</th>
+                                    <th>Horas</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Segunda-feira</td>
+                                    <td>09:00</td>
+                                    <td>18:00</td>
+                                    <td>13:00-14:00</td>
+                                    <td>8h</td>
+                                </tr>
+                                <tr>
+                                    <td>Terça-feira</td>
+                                    <td>09:00</td>
+                                    <td>18:00</td>
+                                    <td>13:00-14:00</td>
+                                    <td>8h</td>
+                                </tr>
+                                <tr>
+                                    <td>Quarta-feira</td>
+                                    <td>09:00</td>
+                                    <td>18:00</td>
+                                    <td>13:00-14:00</td>
+                                    <td>8h</td>
+                                </tr>
+                                <tr>
+                                    <td>Quinta-feira</td>
+                                    <td>09:00</td>
+                                    <td>18:00</td>
+                                    <td>13:00-14:00</td>
+                                    <td>8h</td>
+                                </tr>
+                                <tr>
+                                    <td>Sexta-feira</td>
+                                    <td>09:00</td>
+                                    <td>17:00</td>
+                                    <td>13:00-14:00</td>
+                                    <td>7h</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Banco de Horas Section -->
+            <div id="bancohoras" class="content-section">
+                <div class="header">
+                    <h1>Banco de Horas</h1>
+                </div>
+                
+                <div class="cards-grid">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Saldo Atual</h3>
+                            <div class="card-icon">💰</div>
+                        </div>
+                        <div class="card-body">
+                            <p class="stat-number" id="bankHoursCurrent">0h</p>
+                            <p class="stat-info">Horas disponíveis</p>
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Horas Positivas</h3>
+                            <div class="card-icon">⬆️</div>
+                        </div>
+                        <div class="card-body">
+                            <p class="stat-number" id="bankHoursPositive">0h</p>
+                            <p class="stat-info" id="bankPositiveInfo">Horas extras</p>
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Horas Negativas</h3>
+                            <div class="card-icon">⬇️</div>
+                        </div>
+                        <div class="card-body">
+                            <p class="stat-number" id="bankHoursNegative">0h</p>
+                            <p class="stat-info" id="bankNegativeInfo">Faltas/atrasos</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="table-container" style="margin-top: 30px;">
+                    <h3>Movimentos do Banco de Horas</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Data</th>
+                                <th>Tipo</th>
+                                <th>Horas</th>
+                                <th>Descrição</th>
+                                <th>Saldo</th>
+                            </tr>
+                        </thead>
+                        <tbody id="bankMovements">
+                            <tr><td colspan="5" class="text-center">Nenhum movimento registado</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div style="margin-top: 30px; padding: 20px; background: #f8f9fa; border-radius: 8px;">
+                    <h3>Informações sobre o Banco de Horas</h3>
+                    <ul style="margin-top: 15px;">
+                        <li>As Horas extras carecem de aprovação prévia e formal, pela Direção.</li>
+                        <li>Atrasos são deduzidos do banco de horas.</li>
+                        <li>Ausências injustificadas são deduzidas do banco.</li>
+                        <li>O valor do banco é calculado com base nos seus registos.</li>
+                        <li>Consulte a Direção para mais informações.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- QR Code Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="app.js"></script>
+    <script src="worker.js"></script>
+</body>
+</html>

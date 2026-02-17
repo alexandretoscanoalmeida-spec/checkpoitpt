@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Check Point - Login</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⏰</text></svg>">
+    <style>
+        /* ESTILOS CORRIGIDOS - QR CODE GRANDE E FIXO */
+        
+        /* Variáveis para controlo de tamanhos */
+        :root {
+            --qr-container-height: 500px;
+            --qr-box-size: 450px;
+            --input-height: 65px;
+            --input-font-size: 24px;
+            --select-font-size: 22px;
+            --button-height: 65px;
+            --button-font-size: 24px;
+            --label-font-size: 20px;
+            --padding-large: 20px;
+        }
+        
+        /* Estilos específicos para orientação horizontal em tablets */
+        @media (min-width: 768px) and (orientation: landscape) {
+            .login-container {
+                flex-direction: row;
+                gap: 40px;
+                padding: 20px;
+                align-items: flex-start;
+                justify-content: center;
+                min-height: 100vh;
+            }
+            
+            .login-header {
+                flex: 0 0 400px;
+                text-align: left;
+                margin-bottom: 0;
+                max-width: 400px;
+                position: sticky;
+                top: 20px;
+                height: auto;
+            }
+            
+            .login-form {
+                flex: 0 0 600px;
+                max-width: 600px;
+                margin: 0;
+                padding: 40px;
+            }
+            
+            .login-header h1 {
+                font-size: 56px;
+                text-align: left;
+                margin-bottom: 20px;
+            }
+            
+            .login-header p {
+                font-size: 24px;
+                text-align: left;
+                margin-bottom: 30px;
+            }
+            
+            .qr-login-section {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                position: relative;
+                margin: 20px 0 30px;
+            }
+            
+            #scanQR {
+                width: 100%;
+                max-width: 100%;
+                margin: 0 auto 25px;
+                height: var(--button-height);
+                font-size: var(--button-font-size);
+                padding: var(--padding-large);
+                background: linear-gradient(135deg, #4361ee 0%, #3a0ca3 100%);
+                border: none;
+                border-radius: 12px;
+                color: white;
+                font-weight: 600;
+                cursor: pointer;
+            }
+            
+            #qr-reader-container {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                z-index: 10;
+                background: white;
+                border-radius: 12px;
+                box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+                display: none;
+                padding: 20px;
+            }
+            
+            /* Estilo para o seletor de câmera */
+            .camera-controls {
+                display: flex;
+                gap: 10px;
+                margin-bottom: 15px;
+                padding: 10px;
+                background: #f0f0f0;
+                border-radius: 8px;
+            }
+            
+            #cameraSelector {
+                flex: 1;
+                padding: 12px;
+                border: 1px solid #ddd;
+                border-radius: 4px;
+                font-size: 18px;
+                height: 50px;
+            }
+            
+            .btn-switch-camera {
+                padding: 0 20px;
+                background: #3498db;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 18px;
+                height: 50px;
+                line-height: 50px;
+            }
+            
+            .btn-switch-camera:hover {
+                background: #2980b9;
+            }
+            
+            /* QR READER - FORÇAR TAMANHO GRANDE SEMPRE */
+            #qr-reader {
+                width: 100% !important;
+                height: var(--qr-container-height) !important;
+                min-height: var(--qr-container-height) !important;
+                max-height: var(--qr-container-height) !important;
+                border: 2px solid #4361ee !important;
+                border-radius: 12px !important;
+                overflow: hidden !important;
+                position: relative !important;
+                background: #000 !important;
+            }
+            
+            #qr-reader__scan_region {
+                width: 100% !important;
+                height: 100% !important;
+                min-height: var(--qr-container-height) !important;
+                max-height: var(--qr-container-height) !important;
+                background: #000 !important;
+                position: relative !important;
+            }
+            
+            #qr-reader__scan_region video {
+                width: 100% !important;
+                height: 100% !important;
+                min-height: var(--qr-container-height) !important;
+                max-height: var(--qr-container-height) !important;
+                object-fit: cover !important;
+                position: absolute !important;
+                top: 0 !important;
+                left: 0 !important;
+            }
+            
+            /* Forçar o quadrado de leitura a ser GRANDE */
+            #qr-reader__scan_region > div:last-child {
+                width: var(--qr-box-size) !important;
+                height: var(--qr-box-size) !important;
+                max-width: 90% !important;
+                max-height: 90% !important;
+                border: 4px solid #4cc9f0 !important;
+                box-shadow: 0 0 0 1000px rgba(0, 0, 0, 0.5) !important;
+                position: absolute !important;
+                top: 50% !important;
+                left: 50% !important;
+                transform: translate(-50%, -50%) !important;
+                z-index: 10 !important;
+            }
+            
+            /* Remover qualquer estilo que possa limitar o tamanho */
+            #qr-reader__scan_region canvas,
+            #qr-reader__scan_region img {
+                width: 100% !important;
+                height: 100% !important;
+                object-fit: cover !important;
+            }
+            
+            #qr-reader__dashboard {
+                padding: 15px !important;
+                background: #f8f9fa !important;
+            }
+            
+            #qr-reader__dashboard button {
+                height: 45px !important;
+                font-size: 16px !important;
+                padding: 10px 20px !important;
+                margin: 5px !important;
+                border-radius: 8px !important;
+                background: #4361ee !important;
+                color: white !important;
+                border: none !important;
+                font-weight: 600 !important;
+                cursor: pointer !important;
+            }
+            
+            #qr-reader__status_span {
+                font-size: 16px !important;
+                padding: 10px !important;
+                color: #333 !important;
+            }
+            
+            .footer-left {
+                margin-top: 40px;
+                padding-top: 20px;
+                border-top: 1px solid rgba(255, 255, 255, 0.2);
+                text-align: left;
+            }
+            
+            .login-footer {
+                display: none;
+            }
+            
+            /* AMPLIAÇÃO DOS CAMPOS DE INPUT */
+            .input-group {
+                margin-bottom: 25px;
+            }
+            
+            .input-group label {
+                display: block;
+                margin-bottom: 10px;
+                font-weight: 600;
+                color: #333;
+                font-size: var(--label-font-size);
+            }
+            
+            .input-group input {
+                width: 100%;
+                padding: var(--padding-large);
+                border: 2px solid #e0e0e0;
+                border-radius: 12px;
+                font-size: var(--input-font-size);
+                height: var(--input-height);
+                background: white;
+                color: #333;
+                font-weight: 500;
+            }
+            
+            .input-group input::placeholder {
+                color: #999;
+                font-size: 20px;
+            }
+            
+            .input-group select {
+                width: 100%;
+                padding: var(--padding-large);
+                border: 2px solid #e0e0e0;
+                border-radius: 12px;
+                font-size: var(--select-font-size);
+                height: var(--input-height);
+                background: white;
+                color: #333;
+                font-weight: 500;
+                -webkit-appearance: menulist;
+                appearance: menulist;
+            }
+            
+            .input-group select option {
+                font-size: 20px;
+                padding: 12px;
+                color: #333;
+            }
+            
+            /* AMPLIAÇÃO DO BOTÃO PRINCIPAL */
+            .btn.btn-secondary {
+                width: 100%;
+                height: var(--button-height);
+                font-size: var(--button-font-size);
+                padding: var(--padding-large);
+                background: #6c757d;
+                color: white;
+                border: none;
+                border-radius: 12px;
+                font-weight: 600;
+                cursor: pointer;
+                margin-top: 10px;
+            }
+            
+            /* AMPLIAÇÃO DOS TÍTULOS */
+            .login-form h2 {
+                font-size: 32px;
+                margin-bottom: 25px;
+                color: #333;
+                font-weight: 600;
+            }
+            
+            .login-form h3 {
+                font-size: 28px;
+                margin-bottom: 20px;
+                color: #4361ee;
+                font-weight: 600;
+            }
+            
+            .login-form hr + p {
+                font-size: 22px;
+                color: #666;
+                margin: 15px 0;
+            }
+            
+            /* Ajuste do separador */
+            .login-form hr {
+                border: none;
+                border-top: 2px solid #ddd;
+                margin: 20px 0;
+            }
+        }
+        
+        /* Para tablets em geral */
+        @media (min-width: 768px) {
+            .login-container {
+                padding: 40px;
+            }
+        }
+        
+        /* Para mobile/vertical */
+        @media (max-width: 767px) {
+            .login-container {
+                align-items: center;
+            }
+            
+            .login-header {
+                width: 100%;
+                max-width: 100%;
+                position: static;
+            }
+            
+            .login-form {
+                width: 100%;
+                max-width: 100%;
+                padding: 30px 20px;
+            }
+            
+            .footer-left {
+                display: none;
+            }
+            
+            .login-footer {
+                display: block;
+            }
+            
+            #qr-reader-container {
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                z-index: 1000;
+                background: white;
+                padding: 15px;
+                overflow-y: auto;
+            }
+            
+            .camera-controls {
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+                margin-bottom: 15px;
+            }
+            
+            #cameraSelector {
+                width: 100%;
+                padding: 12px;
+                font-size: 18px;
+                height: 50px;
+            }
+            
+            .btn-switch-camera {
+                width: 100%;
+                padding: 12px;
+                font-size: 18px;
+                height: 50px;
+            }
+            
+            #qr-reader {
+                width: 100% !important;
+                height: 400px !important;
+                min-height: 400px !important;
+                max-height: 400px !important;
+            }
+            
+            #qr-reader__scan_region {
+                height: 400px !important;
+                min-height: 400px !important;
+                max-height: 400px !important;
+            }
+            
+            #qr-reader__scan_region video {
+                height: 400px !important;
+                min-height: 400px !important;
+                max-height: 400px !important;
+                object-fit: cover !important;
+            }
+            
+            #qr-reader__scan_region > div:last-child {
+                width: 300px !important;
+                height: 300px !important;
+            }
+            
+            /* Aumentar inputs em mobile */
+            .input-group input,
+            .input-group select {
+                padding: 15px;
+                font-size: 20px;
+                height: 60px;
+            }
+            
+            .input-group select {
+                font-size: 20px;
+            }
+            
+            .btn.btn-secondary {
+                height: 60px;
+                font-size: 22px;
+                padding: 12px;
+            }
+            
+            .login-form h2 {
+                font-size: 28px;
+            }
+            
+            .login-form h3 {
+                font-size: 24px;
+            }
+        }
+        
+        /* Garantir que o leitor QR tem sempre o mesmo tamanho */
+        #qr-reader__scan_region > div:last-child {
+            transition: none !important;
+            animation: none !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container" id="mainContainer">
+        <div class="login-header">
+            <div>
+                <h1>⏰ Check Point</h1>
+                <p>Sistema de Gestão de Presenças</p>
+                <div style="margin-top: 30px; padding: 20px; background: rgba(255,255,255,0.1); border-radius: 12px;">
+                    <h3 style="margin-bottom: 15px; font-size: 20px;">📱 Como usar:</h3>
+                    <ul style="text-align: left; padding-left: 20px; font-size: 16px;">
+                        <li>Posicione o tablet horizontalmente</li>
+                        <li>Use QR Code para login rápido</li>
+                        <li>Ou insira o PIN manualmente</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="footer-left">
+                <p>© 2026 Check Point. Para uso interno.</p>
+                <p style="font-size: 12px; color: rgba(255, 255, 255, 0.7);">Versão 2.0</p>
+            </div>
+        </div>
+        
+        <div class="login-form">
+            <h2>Login por QR Code</h2>
+            
+            <div class="qr-login-section">
+                <button id="scanQR" class="btn btn-primary" type="button">
+                    📱 Ler QR Code
+                </button>
+                
+                <!-- Container específico para o QR Reader -->
+                <div id="qr-reader-container">
+                    <div class="camera-controls">
+                        <select id="cameraSelector" class="filter-select">
+                            <option value="">A carregar câmaras...</option>
+                        </select>
+                        <button id="switchCameraBtn" class="btn-switch-camera">🔄 Trocar Câmara</button>
+                    </div>
+                    <div id="qr-reader"></div>
+                    <button id="closeQRReader" class="btn btn-danger" style="margin-top: 15px; width: 100%; height: 55px; font-size: 20px;">✕ Fechar Leitor</button>
+                </div>
+            </div>
+            
+            <div style="text-align: center; margin: 25px 0;">
+                <hr>
+                <p>ou</p>
+            </div>
+            
+            <h3>Login por PIN</h3>
+            <form id="loginForm">
+                <div class="input-group">
+                    <label for="userPin">PIN (4 dígitos):</label>
+                    <input type="password" id="userPin" pattern="[0-9]{4}" maxlength="4" required 
+                           placeholder="Digite seu PIN de 4 dígitos" autocomplete="off">
+                </div>
+                
+                <div class="input-group">
+                    <label for="userType">Tipo de Acesso:</label>
+                    <select id="userType">
+                        <option value="worker">Trabalhador</option>
+                        <option value="admin">Administrador</option>
+                    </select>
+                </div>
+                
+                <button type="submit" class="btn btn-secondary">Entrar com PIN</button>
+            </form>
+        </div>
+        
+        <!-- Footer original (visível apenas em mobile/vertical) -->
+        <div class="login-footer">
+            <p>© 2026 Check Point. Para uso interno.</p>
+            <p style="font-size: 12px; color: #666;">Versão 2.0</p>
+        </div>
+    </div>
+    
+    <!-- Bibliotecas QR Code -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode@2.3.4/html5-qrcode.min.js"></script>
+    <script src="app.js"></script>
+    
+    <script>
+        // Script específico para o leitor QR na página de login - VERSÃO CORRIGIDA
+        document.addEventListener('DOMContentLoaded', function() {
+            const scanQRBtn = document.getElementById('scanQR');
+            const qrReaderContainer = document.getElementById('qr-reader-container');
+            const qrReaderElement = document.getElementById('qr-reader');
+            const closeQRReader = document.getElementById('closeQRReader');
+            const cameraSelector = document.getElementById('cameraSelector');
+            const switchCameraBtn = document.getElementById('switchCameraBtn');
+            
+            let html5QrCode = null;
+            let cameras = [];
+            let currentCameraIndex = 0;
+            
+            // Função para limpar e reinicializar o leitor
+            async function resetQRReader() {
+                if (html5QrCode) {
+                    try {
+                        await html5QrCode.stop();
+                        await html5QrCode.clear();
+                    } catch (err) {
+                        console.log('Erro ao parar leitor:', err);
+                    }
+                    html5QrCode = null;
+                }
+                
+                // Limpar o conteúdo do elemento
+                if (qrReaderElement) {
+                    qrReaderElement.innerHTML = '';
+                }
+            }
+            
+            // Função para listar câmaras disponíveis
+            async function listCameras() {
+                try {
+                    cameras = await Html5Qrcode.getCameras();
+                    if (cameras && cameras.length > 0) {
+                        cameraSelector.innerHTML = '';
+                        cameras.forEach((camera, index) => {
+                            const option = document.createElement('option');
+                            option.value = camera.id;
+                            option.textContent = camera.label || `Câmara ${index + 1}`;
+                            // Priorizar câmara traseira (environment)
+                            if (camera.label.toLowerCase().includes('back') || 
+                                camera.label.toLowerCase().includes('traseira') ||
+                                camera.label.toLowerCase().includes('environment')) {
+                                option.selected = true;
+                                currentCameraIndex = index;
+                            }
+                            cameraSelector.appendChild(option);
+                        });
+                        
+                        // Se nenhuma câmara traseira foi encontrada, selecionar a primeira
+                        if (!cameraSelector.querySelector('option[selected]')) {
+                            cameraSelector.options[0].selected = true;
+                        }
+                    }
+                } catch (err) {
+                    console.error('Erro ao listar câmaras:', err);
+                    cameraSelector.innerHTML = '<option value="">Erro ao carregar câmaras</option>';
+                }
+            }
+            
+            // FUNÇÃO CORRIGIDA - Conversão para string na comparação
+            function loginWithPin(pin) {
+                console.log('Tentando login com PIN:', pin);
+                
+                // Verificar se PontoApp existe
+                if (!window.PontoApp) {
+                    console.error('PontoApp não encontrado');
+                    return false;
+                }
+                
+                // Verificar se workers existe
+                if (!window.PontoApp.workers || !Array.isArray(window.PontoApp.workers)) {
+                    console.error('Lista de workers não encontrada');
+                    return false;
+                }
+                
+                // CONVERSÃO CRÍTICA: Garantir que ambos são strings para comparação
+                const pinString = String(pin).trim();
+                
+                // Procurar trabalhador com este PIN (comparação como string)
+                const worker = window.PontoApp.workers.find(w => String(w.pin) === pinString);
+                
+                if (!worker) {
+                    console.log('Trabalhador não encontrado para o PIN:', pinString);
+                    console.log('PINs disponíveis:', window.PontoApp.workers.map(w => String(w.pin)).join(', '));
+                    if (window.PontoApp.showNotification) {
+                        window.PontoApp.showNotification('PIN inválido!', 'error');
+                    }
+                    return false;
+                }
+                
+                if (!worker.active) {
+                    console.log('Trabalhador inativo:', worker.name);
+                    if (window.PontoApp.showNotification) {
+                        window.PontoApp.showNotification('Este trabalhador está inativo!', 'error');
+                    }
+                    return false;
+                }
+                
+                console.log('Login bem-sucedido:', worker.name, 'Admin:', worker.isAdmin);
+                
+                // Login direto
+                window.PontoApp.currentUser = worker;
+                window.PontoApp.isAdmin = worker.isAdmin || false;
+                
+                sessionStorage.setItem('currentUser', JSON.stringify(worker));
+                sessionStorage.setItem('isAdmin', worker.isAdmin ? 'true' : 'false');
+                
+                if (window.PontoApp.showNotification) {
+                    window.PontoApp.showNotification(`Bem-vindo, ${worker.name}!`, 'success');
+                }
+                
+                // Redirecionar
+                setTimeout(() => {
+                    window.location.href = worker.isAdmin ? 'admin.html' : 'worker.html';
+                }, 500);
+                
+                return true;
+            }
+            
+            // Função para iniciar o leitor QR
+            async function startQRReader(cameraId) {
+                // Garantir que está limpo antes de começar
+                await resetQRReader();
+                
+                // Criar nova instância
+                html5QrCode = new Html5Qrcode("qr-reader");
+                
+                // Configurar com qrbox GRANDE e leitura rápida
+                const config = {
+                    fps: 15, // Mais frames por segundo
+                    qrbox: { width: 450, height: 450 }, // Quadrado grande
+                    aspectRatio: 1.0,
+                    disableFlip: false // Não desativar flip para melhor deteção
+                };
+                
+                try {
+                    await html5QrCode.start(
+                        cameraId,
+                        config,
+                        (decodedText) => {
+                            console.log('QR Code lido:', decodedText);
+                            
+                            // EXTRAIR PIN - VERSÃO ROBUSTA PARA TODOS OS FORMATOS
+                            let pin = null;
+                            
+                            // FORMATO 1: CHECKPOINT:PIN:0001|NAME:Maria Silva|ROLE:Educadora
+                            const checkpointMatch = decodedText.match(/CHECKPOINT:PIN:(\d{4})/i);
+                            if (checkpointMatch) {
+                                pin = checkpointMatch[1];
+                                console.log('Formato 1 (CHECKPOINT):', pin);
+                            }
+                            
+                            // FORMATO 2: PIN:0001
+                            if (!pin) {
+                                const pinMatch = decodedText.match(/PIN:(\d{4})/i);
+                                if (pinMatch) {
+                                    pin = pinMatch[1];
+                                    console.log('Formato 2 (PIN):', pin);
+                                }
+                            }
+                            
+                            // FORMATO 3: Apenas 4 dígitos
+                            if (!pin) {
+                                const digitsMatch = decodedText.match(/^\d{4}$/);
+                                if (digitsMatch) {
+                                    pin = digitsMatch[0];
+                                    console.log('Formato 3 (4 dígitos):', pin);
+                                }
+                            }
+                            
+                            // FORMATO 4: Qualquer sequência de 4 dígitos no texto
+                            if (!pin) {
+                                const anyDigits = decodedText.match(/\b(\d{4})\b/);
+                                if (anyDigits) {
+                                    pin = anyDigits[1];
+                                    console.log('Formato 4 (qualquer 4 dígitos):', pin);
+                                }
+                            }
+                            
+                            // FORMATO 5: Extrair de qualquer lugar (último recurso)
+                            if (!pin) {
+                                // Procurar qualquer grupo de 4 dígitos consecutivos
+                                const allMatches = decodedText.match(/\d{4}/g);
+                                if (allMatches && allMatches.length > 0) {
+                                    pin = allMatches[0];
+                                    console.log('Formato 5 (primeiros 4 dígitos encontrados):', pin);
+                                }
+                            }
+                            
+                            if (pin) {
+                                console.log('✅ PIN extraído com sucesso:', pin);
+                                
+                                // Preencher o campo PIN
+                                const pinInput = document.getElementById('userPin');
+                                if (pinInput) {
+                                    pinInput.value = pin;
+                                }
+                                
+                                // Parar o leitor
+                                stopQRReader();
+                                
+                                // Pequeno delay para garantir que tudo está pronto
+                                setTimeout(() => {
+                                    // Tentar login direto
+                                    const loginSuccess = loginWithPin(pin);
+                                    
+                                    // Se login direto falhar, tentar via formulário
+                                    if (!loginSuccess) {
+                                        console.log('Login direto falhou, tentando via formulário');
+                                        const loginForm = document.getElementById('loginForm');
+                                        if (loginForm) {
+                                            loginForm.dispatchEvent(new Event('submit'));
+                                        }
+                                    }
+                                }, 100);
+                            } else {
+                                console.log('❌ Nenhum PIN válido encontrado no QR Code');
+                                if (window.PontoApp && window.PontoApp.showNotification) {
+                                    window.PontoApp.showNotification('QR Code inválido!', 'error');
+                                }
+                            }
+                        },
+                        (errorMessage) => {
+                            // Ignorar erros de leitura (normais durante o scanning)
+                            // Não mostrar erros para não incomodar o utilizador
+                        }
+                    );
+                    
+                    console.log('Leitor QR iniciado com sucesso (tamanho 450x450, fps=15)');
+                    
+                } catch (err) {
+                    console.error('Erro ao iniciar leitor QR:', err);
+                    if (window.PontoApp && window.PontoApp.showNotification) {
+                        window.PontoApp.showNotification('Erro ao aceder à câmara. Verifique as permissões.', 'error');
+                    }
+                }
+            }
+            
+            // Função para parar o leitor QR
+            async function stopQRReader() {
+                if (html5QrCode) {
+                    try {
+                        await html5QrCode.stop();
+                        await html5QrCode.clear();
+                    } catch (err) {
+                        console.error('Erro ao parar leitor:', err);
+                    }
+                    html5QrCode = null;
+                }
+                
+                if (qrReaderContainer) {
+                    qrReaderContainer.style.display = 'none';
+                }
+                
+                // Limpar completamente o conteúdo
+                if (qrReaderElement) {
+                    qrReaderElement.innerHTML = '';
+                }
+            }
+            
+            // Abrir leitor QR
+            scanQRBtn.addEventListener('click', async function() {
+                // Mostrar container
+                qrReaderContainer.style.display = 'block';
+                
+                // Listar câmaras
+                await listCameras();
+                
+                // Pequeno delay para garantir que o container está visível
+                setTimeout(async () => {
+                    if (cameras.length > 0) {
+                        const selectedCameraId = cameraSelector.value;
+                        await startQRReader(selectedCameraId);
+                    } else {
+                        await startQRReader({ facingMode: "environment" });
+                    }
+                }, 100);
+            });
+            
+            // Trocar câmara
+            switchCameraBtn.addEventListener('click', async function() {
+                if (cameras.length > 1) {
+                    currentCameraIndex = (currentCameraIndex + 1) % cameras.length;
+                    const nextCameraId = cameras[currentCameraIndex].id;
+                    cameraSelector.value = nextCameraId;
+                    await startQRReader(nextCameraId);
+                } else {
+                    if (html5QrCode) {
+                        // Alternar entre frontal e traseira
+                        const currentFacingMode = html5QrCode.getFacingMode() === 'environment' ? 'user' : 'environment';
+                        await startQRReader({ facingMode: currentFacingMode });
+                    }
+                }
+            });
+            
+            // Selecionar câmara pelo dropdown
+            cameraSelector.addEventListener('change', async function() {
+                const cameraId = this.value;
+                if (cameraId) {
+                    currentCameraIndex = cameras.findIndex(c => c.id === cameraId);
+                    await startQRReader(cameraId);
+                }
+            });
+            
+            // Fechar leitor QR
+            closeQRReader.addEventListener('click', async function() {
+                await stopQRReader();
+            });
+            
+            // Fechar ao clicar fora
+            qrReaderContainer.addEventListener('click', async function(e) {
+                if (e.target === qrReaderContainer) {
+                    await stopQRReader();
+                }
+            });
+            
+            // Handler do formulário de login
+            const loginForm = document.getElementById('loginForm');
+            if (loginForm) {
+                loginForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    
+                    const pin = document.getElementById('userPin').value.trim();
+                    
+                    if (!pin || pin.length !== 4) {
+                        if (window.PontoApp && window.PontoApp.showNotification) {
+                            window.PontoApp.showNotification('PIN inválido!', 'error');
+                        }
+                        return;
+                    }
+                    
+                    // Tentar login direto
+                    loginWithPin(pin);
+                });
+            }
+        });
+    </script>
+</body>
+</html>

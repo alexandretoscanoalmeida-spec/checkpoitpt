@@ -1,0 +1,43 @@
+{
+  "name": "Check Point",
+  "short_name": "Ponto",
+  "description": "Sistema de Gestão de Presenças Offline",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#667eea",
+  "theme_color": "#764ba2",
+  "orientation": "landscape-primary",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22 fill=%22%23667eea%22>⏰</text></svg>",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⏰</text></svg>",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⏰</text></svg>",
+      "sizes": "512x512",
+      "type": "image/svg+xml"
+    }
+  ],
+  "categories": ["business", "productivity"],
+  "shortcuts": [
+    {
+      "name": "Marcar Ponto",
+      "short_name": "Ponto",
+      "description": "Marcar entrada/saída",
+      "url": "/worker.html"
+    },
+    {
+      "name": "Administração",
+      "short_name": "Admin",
+      "description": "Painel de administração",
+      "url": "/admin.html"
+    }
+  ],
+  "prefer_related_applications": false
+}
