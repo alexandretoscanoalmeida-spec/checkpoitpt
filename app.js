@@ -838,8 +838,7 @@ class PontoApp {
             return false;
         }
         
-        // CORREÇÃO: Converter para string na comparação
-        const worker = this.workers.find(w => String(w.pin) === pin);
+        const worker = this.workers.find(w => w.pin === pin);
         
         if (!worker) {
             console.log(`❌ PIN ${pin} não encontrado.`);
