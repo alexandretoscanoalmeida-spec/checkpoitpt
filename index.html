@@ -228,13 +228,7 @@
                 </button>
                 
                 <!-- Container específico para o QR Reader -->
-                <div id="qr-reader-container">
-                    <div class="camera-controls">
-                        <select id="cameraSelector" class="filter-select">
-                            <option value="">A carregar câmaras...</option>
-                        </select>
-                        <button id="switchCameraBtn" class="btn-switch-camera">🔄 Trocar Câmara</button>
-                    </div>
+                <div id="qr-reader-container">                    
                     <div id="qr-reader"></div>
                     <button id="closeQRReader" class="btn btn-danger" style="margin-top: 15px; width: 100%;">✕ Fechar Leitor</button>
                 </div>
@@ -476,19 +470,11 @@ async function startQRReader() {
                 qrReaderContainer.style.display = 'none';
             }
             
-            // Abrir leitor QR
+            // Abrir leitor QR - VERSÃO SIMPLIFICADA
 scanQRBtn.addEventListener('click', async function() {
     qrReaderContainer.style.display = 'block';
-    await listCameras();
-    
-    // Iniciar com a câmara selecionada
-    if (cameras.length > 0) {
-        const selectedCameraId = cameraSelector.value;
-        await startQRReader(selectedCameraId);
-    } else {
-        // CORRIGIDO: Tentar iniciar com câmara FRONTAL (user)
-        await startQRReader({ facingMode: "user" });
-    }
+    // IGNORAR TUDO - CHAMAR DIRETAMENTE A FUNÇÃO QUE USA CÂMARA FRONTAL
+    await startQRReader();  // ← SEM PARÂMETROS!
 });
             
             // Trocar câmara
