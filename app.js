@@ -25,38 +25,17 @@ class PontoApp {
     }
 
     init() {
-    console.log('🔧 PontoApp iniciando...');
-    this.loadData();
-    this.setupEventListeners();
-    this.checkAuth();
-    
-    // Validar consistência do banco de horas ao iniciar
-    this.validateHoursBankConsistency();
-    
-    // VERIFICAÇÃO CRÍTICA: Se os relatórios estiverem vazios ou com zeros, recriar dados
-    this.ensureDataIsValid();
-    
-    // ===== DISPARAR EVENTO QUANDO O PONTOAPP ESTIVER PRONTO =====
-    // Pequeno delay para garantir que tudo inicializou completamente
-    setTimeout(() => {
-        // Criar evento personalizado com dados úteis
-        const event = new CustomEvent('pontoappReady', { 
-            detail: { 
-                app: this, 
-                workers: this.workers.length,
-                timestamp: new Date().toISOString()
-            }
-        });
+        console.log('🔧 PontoApp iniciando...');
+        this.loadData();
+        this.setupEventListeners();
+        this.checkAuth();
         
-        // Disparar o evento no objeto window (global)
-        window.dispatchEvent(event);
+        // Validar consistência do banco de horas ao iniciar
+        this.validateHoursBankConsistency();
         
-        console.log(`🚀 Evento 'pontoappReady' disparado com ${this.workers.length} trabalhadores`);
-        
-        // Também definir uma flag global para verificação síncrona
-        window.pontoAppReady = true;
-    }, 200); // 200ms é suficiente para garantir que tudo carregou
-}
+        // VERIFICAÇÃO CRÍTICA: Se os relatórios estiverem vazios ou com zeros, recriar dados
+        this.ensureDataIsValid();
+    }
 
     // NOVO: Iniciar verificação automática do banco de horas
     startAutoBankUpdate() {
