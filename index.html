@@ -387,35 +387,39 @@ document.addEventListener('DOMContentLoaded', function() {
             let currentCameraIndex = 0;
             
             // Função para listar câmaras disponíveis
-            async function listCameras() {
-                try {
-                    cameras = await Html5Qrcode.getCameras();
-                    if (cameras && cameras.length > 0) {
-                        cameraSelector.innerHTML = '';
-                        cameras.forEach((camera, index) => {
-                            const option = document.createElement('option');
-                            option.value = camera.id;
-                            option.textContent = camera.label || `Câmara ${index + 1}`;
-                            // Priorizar câmara traseira (environment)
-                            if (camera.label.toLowerCase().includes('back') || 
-                                camera.label.toLowerCase().includes('traseira') ||
-                                camera.label.toLowerCase().includes('environment')) {
-                                option.selected = true;
-                                currentCameraIndex = index;
-                            }
-                            cameraSelector.appendChild(option);
-                        });
-                        
-                        // Se nenhuma câmara traseira foi encontrada, selecionar a primeira
-                        if (!cameraSelector.querySelector('option[selected]')) {
-                            cameraSelector.options[0].selected = true;
-                        }
-                    }
-                } catch (err) {
-                    console.error('Erro ao listar câmaras:', err);
-                    cameraSelector.innerHTML = '<option value="">Erro ao carregar câmaras</option>';
+            // Função para listar câmaras disponíveis
+async function listCameras() {
+    try {
+        cameras = await Html5Qrcode.getCameras();
+        if (cameras && cameras.length > 0) {
+            cameraSelector.innerHTML = '';
+            cameras.forEach((camera, index) => {
+                const option = document.createElement('option');
+                option.value = camera.id;
+                option.textContent = camera.label || `Câmara ${index + 1}`;
+                // Priorizar câmara da frente (user)
+                if (camera.label.toLowerCase().includes('front') || 
+                    camera.label.toLowerCase().includes('frontal') ||
+                    camera.label.toLowerCase().includes('selfie') ||
+                    camera.label.toLowerCase().includes('user')) {
+                    option.selected = true;
+                    currentCameraIndex = index;
                 }
+                cameraSelector.appendChild(option);
+            });
+            
+            // Se nenhuma câmara frontal foi encontrada, selecionar a primeira
+            if (!cameraSelector.querySelector('option[selected]')) {
+                cameraSelector.options[0].selected = true;
             }
+        } else {
+            cameraSelector.innerHTML = '<option value="">Nenhuma câmara encontrada</option>';
+        }
+    } catch (err) {
+        console.error('Erro ao listar câmaras:', err);
+        cameraSelector.innerHTML = '<option value="">Erro ao carregar câmaras</option>';
+    }
+}
             
             // Função para iniciar o leitor QR
             async function startQRReader(cameraId) {
@@ -543,35 +547,42 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             
             // Abrir leitor QR
-            scanQRBtn.addEventListener('click', async function() {
-                qrReaderContainer.style.display = 'block';
-                await listCameras();
-                
-                // Iniciar com a câmara selecionada
-                if (cameras.length > 0) {
-                    const selectedCameraId = cameraSelector.value;
-                    await startQRReader(selectedCameraId);
-                } else {
-                    // Tentar iniciar com câmara padrão
-                    await startQRReader({ facingMode: "environment" });
-                }
-            });
+scanQRBtn.addEventListener('click', async function() {
+    qrReaderContainer.style.display = 'block';
+    await listCameras();
+    
+    // Iniciar com a câmara selecionada
+    if (cameras.length > 0) {
+        const selectedCameraId = cameraSelector.value;
+        await startQRReader(selectedCameraId);
+    } else {
+        // Tentar iniciar com câmara frontal (selfie)
+        console.log('⚠️ Nenhuma câmara listada, usando facingMode: "user" (frontal)');
+        await startQRReader({ facingMode: "user" });
+    }
+});
             
             // Trocar câmara
-            switchCameraBtn.addEventListener('click', async function() {
-                if (cameras.length > 1) {
-                    currentCameraIndex = (currentCameraIndex + 1) % cameras.length;
-                    const nextCameraId = cameras[currentCameraIndex].id;
-                    cameraSelector.value = nextCameraId;
-                    await startQRReader(nextCameraId);
-                } else {
-                    // Alternar entre frontal e traseira se não houver lista completa
-                    if (html5QrCode) {
-                        const currentFacingMode = html5QrCode.getFacingMode() === 'environment' ? 'user' : 'environment';
-                        await startQRReader({ facingMode: currentFacingMode });
-                    }
-                }
-            });
+switchCameraBtn.addEventListener('click', async function() {
+    if (cameras.length > 1) {
+        // Se há múltiplas câmaras listadas, alternar entre elas
+        currentCameraIndex = (currentCameraIndex + 1) % cameras.length;
+        const nextCameraId = cameras[currentCameraIndex].id;
+        cameraSelector.value = nextCameraId;
+        console.log(`🔄 Alternando para câmara: ${cameras[currentCameraIndex].label || currentCameraIndex + 1}`);
+        await startQRReader(nextCameraId);
+    } else {
+        // Se não há lista completa, alternar entre frontal e traseira
+        if (html5QrCode) {
+            // Obter o modo atual (assumindo que começou com 'user' - frontal)
+            const currentFacingMode = html5QrCode.getFacingMode() === 'user' ? 'environment' : 'user';
+            console.log(`🔄 Alternando para facingMode: ${currentFacingMode}`);
+            await startQRReader({ facingMode: currentFacingMode });
+        } else {
+            console.warn('⚠️ Leitor QR não inicializado');
+        }
+    }
+});
             
             // Selecionar câmara pelo dropdown
             cameraSelector.addEventListener('change', async function() {
