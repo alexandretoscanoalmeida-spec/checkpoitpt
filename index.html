@@ -292,36 +292,38 @@
             let currentCameraIndex = 0;
             
             // Função para listar câmaras disponíveis
-            async function listCameras() {
-                try {
-                    cameras = await Html5Qrcode.getCameras();
-                    if (cameras && cameras.length > 0) {
-                        cameraSelector.innerHTML = '';
-                        cameras.forEach((camera, index) => {
-                            const option = document.createElement('option');
-                            option.value = camera.id;
-                            option.textContent = camera.label || `Câmara ${index + 1}`;
-                            // Priorizar câmara traseira (environment)
-                            if (camera.label.toLowerCase().includes('back') || 
-                                camera.label.toLowerCase().includes('traseira') ||
-                                camera.label.toLowerCase().includes('environment')) {
-                                option.selected = true;
-                                currentCameraIndex = index;
-                            }
-                            cameraSelector.appendChild(option);
-                        });
-                        
-                        // Se nenhuma câmara traseira foi encontrada, selecionar a primeira
-                        if (!cameraSelector.querySelector('option[selected]')) {
-                            cameraSelector.options[0].selected = true;
-                        }
-                    }
-                } catch (err) {
-                    console.error('Erro ao listar câmaras:', err);
-                    cameraSelector.innerHTML = '<option value="">Erro ao carregar câmaras</option>';
+async function listCameras() {
+    try {
+        cameras = await Html5Qrcode.getCameras();
+        if (cameras && cameras.length > 0) {
+            cameraSelector.innerHTML = '';
+            cameras.forEach((camera, index) => {
+                const option = document.createElement('option');
+                option.value = camera.id;
+                option.textContent = camera.label || `Câmara ${index + 1}`;
+                // Priorizar câmara frontal (user) em vez de traseira (environment)
+                if (camera.label.toLowerCase().includes('front') || 
+                    camera.label.toLowerCase().includes('frontal') ||
+                    camera.label.toLowerCase().includes('selfie') ||
+                    camera.label.toLowerCase().includes('user')) {
+                    option.selected = true;
+                    currentCameraIndex = index;
                 }
-            }
+                cameraSelector.appendChild(option);
+            });
             
+            // Se nenhuma câmara frontal foi encontrada, selecionar a primeira
+            if (!cameraSelector.querySelector('option[selected]')) {
+                cameraSelector.options[0].selected = true;
+                currentCameraIndex = 0;
+            }
+        }
+    } catch (err) {
+        console.error('Erro ao listar câmaras:', err);
+        cameraSelector.innerHTML = '<option value="">Erro ao carregar câmaras</option>';
+    }
+}
+          
             // Função para iniciar o leitor QR
             async function startQRReader(cameraId) {
                 if (html5QrCode) {
