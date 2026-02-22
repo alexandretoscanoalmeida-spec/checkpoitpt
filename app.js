@@ -191,59 +191,126 @@ class PontoApp {
         return hora >= 23 && minuto >= 59;
     }
 
-    ensureDataIsValid() {
-        console.log('🔍 Verificando se os dados são válidos...');
-        
-        // Verificar se há relatórios com valores não-zero
-        const hasValidReports = this.reports && this.reports.length > 0 && 
-                               this.reports.some(r => r.totalReference > 0 || r.totalWorked > 0);
-        
-        // Verificar se há registos administrativos
-        const hasAdminRegistries = this.adminRegistries && this.adminRegistries.length > 0;
-        
-        // Verificar se há registos de ponto
-        const hasRegistries = this.registries && this.registries.length > 0;
-        
-        // Verificar se há horários configurados
-        const hasSchedules = Object.keys(this.schedules).length > 0;
-        
-        console.log('📊 Estado dos dados:', {
-            workers: this.workers.length,
-            registries: this.registries.length,
-            reports: this.reports.length,
-            adminRegistries: this.adminRegistries?.length || 0,
-            schedules: Object.keys(this.schedules).length,
-            hasValidReports,
-            hasAdminRegistries,
-            hasRegistries,
-            hasSchedules
-        });
-        
-        // Se faltar algum dado importante, recriar tudo
-        if (!hasValidReports || !hasAdminRegistries || !hasRegistries || !hasSchedules) {
-            console.log('⚠️ Dados incompletos ou inválidos. A recriar dados de exemplo...');
-            
-            // Limpar localStorage para forçar recriação
-            localStorage.removeItem('ponto_workers');
-            localStorage.removeItem('ponto_schedules');
-            localStorage.removeItem('ponto_registries');
-            localStorage.removeItem('ponto_reports');
-            localStorage.removeItem('ponto_hours_bank');
-            localStorage.removeItem('ponto_admin_registries');
-            
-            // Recriar dados de exemplo
-            this.initializeSampleData();
-            
-            console.log('✅ Dados de exemplo recriados com sucesso!');
-            
-            // Recarregar a página para garantir que tudo é reinicializado
-            setTimeout(() => {
-                window.location.reload();
-            }, 1000);
-        } else {
-            console.log('✅ Dados válidos encontrados!');
-        }
+ensureDataIsValid() {
+    console.log('🔍 Verificando se os dados são válidos...');
+    
+    // Verificar se há relatórios com valores não-zero
+    const hasValidReports = this.reports && this.reports.length > 0;
+    
+    // Verificar se há registos administrativos
+    const hasAdminRegistries = this.adminRegistries && this.adminRegistries.length > 0;
+    
+    // Verificar se há registos de ponto
+    const hasRegistries = this.registries && this.registries.length > 0;
+    
+    // Verificar se há horários configurados
+    const hasSchedules = Object.keys(this.schedules).length > 0;
+    
+    console.log('📊 Estado dos dados:', {
+        workers: this.workers.length,
+        registries: this.registries.length,
+        reports: this.reports.length,
+        adminRegistries: this.adminRegistries?.length || 0,
+        schedules: Object.keys(this.schedules).length,
+        hasValidReports,
+        hasAdminRegistries,
+        hasRegistries,
+        hasSchedules
+    });
+    
+    // Se NÃO HOUVER trabalhadores, aí sim precisamos de dados iniciais
+    if (this.workers.length === 0) {
+        console.log('⚠️ Nenhum trabalhador encontrado. A criar dados de exemplo...');
+        this.initializeSampleData();
+        return;
     }
+    
+    // Se faltam relatórios, gerar apenas os relatórios em falta, NÃO apagar dados
+    if (!hasValidReports || !hasAdminRegistries || !hasRegistries || !hasSchedules) {
+        console.log('⚠️ Alguns dados estão incompletos. A gerar dados em falta...');
+        
+        // Gerar relatórios em branco para trabalhadores que não têm
+        this.generateMissingReports();
+        
+        // Garantir que arrays existem
+        if (!this.adminRegistries) this.adminRegistries = [];
+        if (!this.reports) this.reports = [];
+        
+        console.log('✅ Dados em falta gerados com sucesso!');
+    } else {
+        console.log('✅ Dados válidos encontrados!');
+    }
+}
+
+generateMissingReports() {
+    console.log('📊 A gerar relatórios em falta para trabalhadores...');
+    
+    // Garantir que os arrays existem
+    if (!this.reports) this.reports = [];
+    if (!this.adminRegistries) this.adminRegistries = [];
+    
+    const currentYear = new Date().getFullYear();
+    const currentMonth = new Date().getMonth() + 1;
+    
+    // Para cada trabalhador ativo, verificar se tem relatório do mês atual
+    this.workers.forEach(worker => {
+        if (!worker.active) return;
+        
+        // Verificar se já existe relatório para este mês/ano
+        const hasReport = this.reports.some(r => 
+            r.workerId === worker.id && 
+            r.year === currentYear && 
+            r.month === currentMonth
+        );
+        
+        if (!hasReport) {
+            console.log(`   A criar relatório em branco para ${worker.name} (${currentMonth}/${currentYear})`);
+            
+            // Criar relatório com zeros
+            const blankReport = {
+                id: Date.now() + worker.id,
+                workerId: worker.id,
+                year: currentYear,
+                month: currentMonth,
+                totalReference: 0,
+                totalWorked: 0,
+                justifiedAbsence: 0,
+                unjustifiedAbsence: 0,
+                vacation: 0,
+                training: 0,
+                horasExtras: 0,
+                horasFaltadas: 0,
+                hoursBank: 0,
+                bankValue: 0,
+                deductionValue: 0,
+                generatedAt: new Date().toISOString()
+            };
+            
+            this.reports.push(blankReport);
+        }
+    });
+    
+    // Garantir que schedules existe para todos os trabalhadores
+    this.workers.forEach(worker => {
+        if (!this.schedules[worker.id]) {
+            console.log(`   A criar horário padrão para ${worker.name}`);
+            
+            // Criar horário padrão (9h-17h com pausa)
+            this.schedules[worker.id] = {
+                reference: [
+                    { day: 1, start: '09:00', end: '17:00', break: '13:00-14:00' },
+                    { day: 2, start: '09:00', end: '17:00', break: '13:00-14:00' },
+                    { day: 3, start: '09:00', end: '17:00', break: '13:00-14:00' },
+                    { day: 4, start: '09:00', end: '17:00', break: '13:00-14:00' },
+                    { day: 5, start: '09:00', end: '17:00', break: '13:00-14:00' }
+                ]
+            };
+        }
+    });
+    
+    this.saveAllData();
+    console.log('✅ Relatórios em falta gerados com sucesso');
+}
 
     loadData() {
         console.log('📂 Carregando dados do localStorage...');
@@ -662,17 +729,25 @@ class PontoApp {
         // Relatórios gerados
         this.reports = [];
         
-        // Gerar relatórios para os dados existentes
-        setTimeout(() => {
-            this.generateMonthlyReport(4, 2026, 3, false);
-            this.generateMonthlyReport(5, 2026, 2, false);
-            this.generateMonthlyReport(6, 2026, 2, false);
-            this.generateMonthlyReport(7, 2026, 2, false);
-            this.generateMonthlyReport(5, 2026, 1, false);
-        }, 500);
+        // Gerar relatórios para os dados existentes (usando setTimeout para não bloquear)
+setTimeout(() => {
+    console.log('📊 A gerar relatórios iniciais...');
+    
+    // Usar a nova função para gerar relatórios em falta
+    if (typeof this.generateMissingReports === 'function') {
+        this.generateMissingReports();
+    } else {
+        // Fallback para o código antigo
+        this.generateMonthlyReport(4, 2026, 3, false);
+        this.generateMonthlyReport(5, 2026, 2, false);
+        this.generateMonthlyReport(6, 2026, 2, false);
+        this.generateMonthlyReport(7, 2026, 2, false);
+        this.generateMonthlyReport(5, 2026, 1, false);
+    }
+}, 500);
 
-        this.saveAllData();
-        console.log('✅ Dados iniciais criados com sucesso!');
+this.saveAllData();
+console.log('✅ Dados iniciais criados com sucesso!');
     }
 
     saveAllData() {
@@ -784,229 +859,241 @@ class PontoApp {
     }
 
     setupEventListeners() {
-        console.log('🔗 Configurando event listeners...');
-        
-        setTimeout(() => {
-            const loginForm = document.getElementById('loginForm');
-            if (loginForm) {
-                console.log('✅ Formulário de login encontrado');
-                
-                loginForm.addEventListener('submit', (e) => {
-                    console.log('📝 Formulário submetido');
-                    e.preventDefault();
-                    e.stopPropagation();
-                    this.handleLogin();
-                });
-                
-                const submitBtn = loginForm.querySelector('button[type="submit"]');
-                if (submitBtn) {
-                    submitBtn.addEventListener('click', (e) => {
-                        e.preventDefault();
-                        this.handleLogin();
+    console.log('🔗 Configurando event listeners...');
+    
+    setTimeout(() => {
+        const loginForm = document.getElementById('loginForm');
+        if (loginForm) {
+            console.log('✅ Formulário de login encontrado');
+            
+            // CORREÇÃO 1: Passar o evento 'e' para handleLogin()
+            loginForm.addEventListener('submit', (e) => {
+                console.log('📝 Formulário submetido');
+                // Não fazer preventDefault aqui - deixa o handleLogin() tratar
+                this.handleLogin(e);  // ← CORRIGIDO: passa o evento
+            });
+            
+            const submitBtn = loginForm.querySelector('button[type="submit"]');
+            if (submitBtn) {
+                // CORREÇÃO 2: Também para o clique no botão
+                submitBtn.addEventListener('click', (e) => {
+                    e.preventDefault(); // Prevenir comportamento padrão do botão
+                    // Criar e disparar evento de submit no formulário
+                    const submitEvent = new Event('submit', { 
+                        bubbles: true, 
+                        cancelable: true 
                     });
-                }
-            } else {
-                console.warn('⚠️ Formulário de login não encontrado na página atual');
-            }
-
-            const scanQRBtn = document.getElementById('scanQR');
-            if (scanQRBtn) {
-                scanQRBtn.addEventListener('click', () => this.toggleQRScanner());
-            }
-        }, 100);
-    }
-
-    handleLogin(e) {
-        console.log('🔐 Processando login...');
-        
-        const pinInput = document.getElementById('userPin');
-        const userTypeSelect = document.getElementById('userType');
-        
-        if (!pinInput || !userTypeSelect) {
-            console.error('❌ Elementos do formulário não encontrados');
-            this.showNotification('Erro no formulário de login!', 'error');
-            return false;
-        }
-        
-        const pin = pinInput.value.trim();
-        const userType = userTypeSelect.value;
-        
-        console.log(`🔑 PIN: ${pin}, Tipo: ${userType}`);
-        
-        if (!pin || pin.length !== 4 || !/^\d{4}$/.test(pin)) {
-            this.showNotification('PIN inválido! Deve ter exatamente 4 dígitos.', 'error');
-            return false;
-        }
-        
-        const worker = this.workers.find(w => w.pin === pin);
-        
-        if (!worker) {
-            console.log(`❌ PIN ${pin} não encontrado.`);
-            this.showNotification('PIN inválido!', 'error');
-            return false;
-        }
-        
-        if (!worker.active) {
-            this.showNotification('Este trabalhador está inativo!', 'error');
-            return false;
-        }
-        
-        if (userType === 'admin' && !worker.isAdmin) {
-            this.showNotification('Este utilizador não tem permissões de administrador!', 'error');
-            return false;
-        }
-        
-        console.log(`✅ Login bem-sucedido: ${worker.name} (${userType})`);
-        
-        this.currentUser = worker;
-        this.isAdmin = userType === 'admin';
-        
-        sessionStorage.setItem('currentUser', JSON.stringify(worker));
-        sessionStorage.setItem('isAdmin', this.isAdmin);
-        
-        this.showNotification(`Bem-vindo, ${worker.name}!`, 'success');
-        
-        setTimeout(() => {
-            if (this.isAdmin) {
-                window.location.href = 'admin.html';
-            } else {
-                window.location.href = 'worker.html';
-            }
-        }, 1000);
-        
-        return true;
-    }
-
-    toggleQRScanner() {
-        console.log('Toggle QR Scanner');
-        const qrReader = document.getElementById('qr-reader');
-        const scanQRBtn = document.getElementById('scanQR');
-        
-        if (!qrReader || !scanQRBtn) return;
-        
-        if (qrReader.style.display === 'none' || qrReader.style.display === '') {
-            qrReader.style.display = 'block';
-            scanQRBtn.textContent = '❌ Cancelar Scanner';
-            
-            qrReader.innerHTML = '';
-            
-            const scannerContainer = document.createElement('div');
-            scannerContainer.id = 'scanner-container';
-            scannerContainer.style.width = '100%';
-            scannerContainer.style.height = '300px';
-            scannerContainer.style.position = 'relative';
-            qrReader.appendChild(scannerContainer);
-            
-            if (typeof Html5QrcodeScanner !== 'undefined') {
-                try {
-                    const html5QrCode = new Html5QrcodeScanner(
-                        "scanner-container",
-                        {
-                            fps: 10,
-                            qrbox: { width: 250, height: 250 },
-                            showTorchButtonIfSupported: true,
-                            showZoomSliderIfSupported: true,
-                            facingMode: "environment"
-                        },
-                        false
-                    );
-                    
-                    html5QrCode.render(
-                        (decodedText) => {
-                            console.log('QR Code lido:', decodedText);
-                            
-                            let pin = null;
-                            
-                            if (decodedText.includes('CHECKPOINT:PIN:')) {
-                                const match = decodedText.match(/CHECKPOINT:PIN:(\d{4})/);
-                                if (match) pin = match[1];
-                            } else if (decodedText.includes('PIN:')) {
-                                const match = decodedText.match(/PIN:(\d{4})/);
-                                if (match) pin = match[1];
-                            } else if (/^\d{4}$/.test(decodedText)) {
-                                pin = decodedText;
-                            }
-                            
-                            if (pin) {
-                                document.getElementById('userPin').value = pin;
-                                html5QrCode.clear();
-                                qrReader.style.display = 'none';
-                                scanQRBtn.textContent = '📱 Ler QR Code';
-                                this.showNotification('PIN lido com sucesso!', 'success');
-                                
-                                setTimeout(() => {
-                                    this.handleLogin();
-                                }, 500);
-                            } else {
-                                this.showNotification('QR Code inválido! Deve conter um PIN de 4 dígitos', 'error');
-                            }
-                        },
-                        (errorMessage) => {
-                            if (!errorMessage.includes('NotFoundException')) {
-                                console.log('Scanner error:', errorMessage);
-                            }
-                        }
-                    );
-                    
-                    this.qrScanner = html5QrCode;
-                } catch (error) {
-                    console.error('Erro ao inicializar scanner:', error);
-                    scannerContainer.innerHTML = '<p style="color: var(--danger-color); text-align: center; padding: 20px;">Erro ao iniciar scanner de QR Code. Recarregue a página.</p>';
-                }
-            } else {
-                scannerContainer.innerHTML = '<p style="color: var(--danger-color); text-align: center; padding: 20px;">Biblioteca QR Code não carregada. Verifique sua conexão.</p>';
+                    loginForm.dispatchEvent(submitEvent);
+                });
             }
         } else {
-            if (this.qrScanner) {
+            console.warn('⚠️ Formulário de login não encontrado na página atual');
+        }
+
+        const scanQRBtn = document.getElementById('scanQR');
+        if (scanQRBtn) {
+            scanQRBtn.addEventListener('click', () => this.toggleQRScanner());
+        }
+    }, 100);
+}
+
+    async handleLogin(e) {
+    console.log('🔐 Processando login...');
+    
+    // ===== PARTE 1: PREVENIR COMPORTAMENTO PADRÃO =====
+    if (e && typeof e.preventDefault === 'function') {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+    
+    // ===== PARTE 2: OBTER ELEMENTOS DO FORMULÁRIO =====
+    const pinInput = document.getElementById('userPin');
+    const userTypeSelect = document.getElementById('userType');
+    
+    if (!pinInput || !userTypeSelect) {
+        console.error('❌ Elementos do formulário não encontrados');
+        if (this.showNotification) {
+            this.showNotification('Erro no formulário de login!', 'error');
+        }
+        return false;
+    }
+    
+    // ===== PARTE 3: VALIDAR PIN =====
+    const pin = pinInput.value.trim();
+    const userType = userTypeSelect.value;
+    
+    console.log(`🔑 PIN: ${pin}, Tipo: ${userType}`);
+    
+    if (!pin || pin.length !== 4 || !/^\d{4}$/.test(pin)) {
+        this.showNotification('PIN inválido! Deve ter exatamente 4 dígitos.', 'error');
+        return false;
+    }
+    
+    // ===== PARTE 4: GARANTIR QUE OS DADOS EXISTEM (CORREÇÃO 5) =====
+    console.log('📊 Verificando dados dos trabalhadores...');
+    
+    // Verificar se workers existe e tem conteúdo
+    if (!this.workers || this.workers.length === 0) {
+        console.log('⚠️ workers não encontrado ou vazio. Tentando recuperar...');
+        
+        // TENTATIVA 1: Carregar do localStorage
+        console.log('📂 Tentativa 1: Carregar do localStorage');
+        this.loadData();
+        
+        // Verificar se após loadData os workers foram carregados
+        if (!this.workers || this.workers.length === 0) {
+            console.log('⚠️ Tentativa 1 falhou. workers ainda vazio.');
+            
+            // TENTATIVA 2: Verificar se há dados noutra localStorage key
+            console.log('📂 Tentativa 2: Verificar backup de emergência');
+            const backupData = localStorage.getItem('ponto_pre_import_backup');
+            if (backupData) {
                 try {
-                    this.qrScanner.clear();
-                } catch (e) {
-                    console.log('Erro ao limpar scanner:', e);
+                    const backup = JSON.parse(backupData);
+                    if (backup.workers && backup.workers.length > 0) {
+                        console.log(`✅ Backup encontrado com ${backup.workers.length} trabalhadores`);
+                        this.workers = backup.workers;
+                        this.saveAllData();
+                    }
+                } catch (backupError) {
+                    console.error('❌ Erro ao ler backup:', backupError);
                 }
-                this.qrScanner = null;
             }
             
-            qrReader.style.display = 'none';
-            scanQRBtn.textContent = '📱 Ler QR Code';
-            qrReader.innerHTML = '';
+            // TENTATIVA 3: Criar dados de exemplo
+            if (!this.workers || this.workers.length === 0) {
+                console.log('🆕 Tentativa 3: Criar dados de exemplo');
+                this.initializeSampleData();
+            }
+        }
+        
+        // Pequena pausa para garantir que os dados foram atribuídos
+        // (em JavaScript é síncrono, mas por segurança)
+        await new Promise(resolve => setTimeout(resolve, 50));
+        
+        // Verificação final
+        if (!this.workers || this.workers.length === 0) {
+            console.error('❌ TODAS AS TENTATIVAS FALHARAM. Não foi possível carregar dados.');
+            this.showNotification('Erro crítico: não foi possível carregar os dados!', 'error');
+            return false;
+        } else {
+            console.log(`✅ Dados recuperados com sucesso! ${this.workers.length} trabalhadores disponíveis.`);
+        }
+    } else {
+        console.log(`✅ workers já carregado com ${this.workers.length} trabalhadores`);
+    }
+    
+    // ===== PARTE 5: PROCURAR O TRABALHADOR PELO PIN =====
+    console.log('🔍 A procurar trabalhador com PIN:', pin);
+    console.log('📋 PINs disponíveis:', this.workers.map(w => w.pin).join(', '));
+    
+    const worker = this.workers.find(w => w.pin === pin);
+    
+    if (!worker) {
+        console.log(`❌ PIN ${pin} não encontrado na lista de trabalhadores.`);
+        
+        // Debug: mostrar os primeiros 3 trabalhadores para referência
+        const sampleWorkers = this.workers.slice(0, 3).map(w => `${w.name}: ${w.pin}`);
+        console.log('📋 Exemplos de trabalhadores:', sampleWorkers);
+        
+        this.showNotification('PIN inválido!', 'error');
+        return false;
+    }
+    
+    // ===== PARTE 6: VALIDAR ESTADO DO TRABALHADOR =====
+    console.log(`✅ Trabalhador encontrado: ${worker.name} (Admin: ${worker.isAdmin})`);
+    
+    if (!worker.active) {
+        this.showNotification('Este trabalhador está inativo!', 'error');
+        return false;
+    }
+    
+    if (userType === 'admin' && !worker.isAdmin) {
+        this.showNotification('Este utilizador não tem permissões de administrador!', 'error');
+        return false;
+    }
+    
+    // ===== PARTE 7: PROCESSAR LOGIN BEM-SUCEDIDO =====
+    console.log(`✅ Login bem-sucedido: ${worker.name} (${userType})`);
+    
+    this.currentUser = worker;
+    this.isAdmin = userType === 'admin';
+    
+    // Limpar sessão anterior antes de definir nova
+    sessionStorage.clear();
+    
+    sessionStorage.setItem('currentUser', JSON.stringify(worker));
+    sessionStorage.setItem('isAdmin', this.isAdmin);
+    
+    this.showNotification(`Bem-vindo, ${worker.name}!`, 'success');
+    
+    // ===== PARTE 8: REDIRECIONAR =====
+    setTimeout(() => {
+        if (this.isAdmin) {
+            window.location.href = 'admin.html';
+        } else {
+            window.location.href = 'worker.html';
+        }
+    }, 1000);
+    
+    return true;
+}
+
+    toggleQRScanner() {
+    console.log('📱 Alternar scanner QR');
+    
+    // Delegar para o leitor no index.html
+    const scanQRBtn = document.getElementById('scanQR');
+    const qrReaderContainer = document.getElementById('qr-reader-container');
+    const closeBtn = document.getElementById('closeQRReader');
+    
+    if (!scanQRBtn || !qrReaderContainer) {
+        console.warn('Elementos do leitor QR não encontrados');
+        this.showNotification('Use o botão "Ler QR Code" no formulário', 'info');
+        return;
+    }
+    
+    // Verificar estado atual
+    if (qrReaderContainer.style.display === 'none' || qrReaderContainer.style.display === '') {
+        // Abrir o leitor - simular clique no botão principal
+        console.log('Abrindo leitor QR através do botão principal');
+        scanQRBtn.click();
+    } else {
+        // Fechar o leitor
+        if (closeBtn) {
+            console.log('Fechando leitor QR');
+            closeBtn.click();
         }
     }
+}
 
     checkAuth() {
-        console.log('🔒 Verificando autenticação...');
-        const currentPage = window.location.pathname.split('/').pop();
-        
-        if (currentPage === 'index.html' || currentPage === '' || currentPage.includes('index')) {
-            const user = sessionStorage.getItem('currentUser');
-            if (user) {
-                console.log('🔄 Usuário já autenticado, redirecionando...');
-                this.currentUser = JSON.parse(user);
-                this.isAdmin = sessionStorage.getItem('isAdmin') === 'true';
-                
-                setTimeout(() => {
-                    window.location.href = this.isAdmin ? 'admin.html' : 'worker.html';
-                }, 500);
-            }
-            return;
-        }
-        
+    console.log('🔒 Verificando autenticação...');
+    const currentPage = window.location.pathname.split('/').pop();
+    
+    // Se NÃO estiver na página de login, verificar autenticação
+    if (currentPage !== 'index.html' && currentPage !== '' && !currentPage.includes('index')) {
         const user = sessionStorage.getItem('currentUser');
         if (!user) {
             console.log('❌ Não autenticado, redirecionando para login');
             window.location.href = 'index.html';
-            return;
+        } else {
+            this.currentUser = JSON.parse(user);
+            this.isAdmin = sessionStorage.getItem('isAdmin') === 'true';
         }
-        
+        return;
+    }
+    
+    // NA PÁGINA DE LOGIN: NÃO redirecionar automaticamente
+    // Apenas carregar dados se existirem, sem redirecionar
+    const user = sessionStorage.getItem('currentUser');
+    if (user) {
+        console.log('👤 Utilizador com sessão ativa na página de login - aguardando novo login');
         this.currentUser = JSON.parse(user);
         this.isAdmin = sessionStorage.getItem('isAdmin') === 'true';
-        
-        if (currentPage === 'admin.html' && !this.isAdmin) {
-            console.log('⚠️ Acesso não autorizado a admin, redirecionando');
-            window.location.href = 'worker.html';
-        }
-        
-        console.log('✅ Autenticação verificada');
+        // NÃO redirecionar - permitir novo login
     }
+}
 
     logout() {
         console.log('🚪 Realizando logout...');
@@ -1229,139 +1316,147 @@ class PontoApp {
         return weeks;
     }
 
-    // MODIFICADO: generateMonthlyReport - Agora apenas soma, não recalcula faltas
-    generateMonthlyReport(workerId, year, month, skipSave = false) {
-        const worker = this.workers.find(w => w.id === workerId);
-        if (!worker) {
-            this.showNotification('Trabalhador não encontrado!', 'error');
-            return null;
-        }
-        
-        console.log(`📊 Gerando relatório para ${worker.name} - ${month}/${year}`);
-        
-        const startDate = new Date(year, month - 1, 1);
-        const endDate = new Date(year, month, 0);
-        
-        let totalWorked = 0;
-        let totalReference = 0;
-        let justifiedAbsence = 0;
-        let vacation = 0;
-        let training = 0;
-        
-        const schedule = this.schedules[workerId]?.reference || [];
-        console.log(`📋 Horários encontrados: ${schedule.length} dias configurados`);
-        
-        // Mapa de registos de ponto por data
-        const registriesByDate = {};
-        this.registries
-            .filter(r => r.workerId === workerId)
-            .forEach(reg => {
-                if (!registriesByDate[reg.date]) {
-                    registriesByDate[reg.date] = [];
-                }
-                registriesByDate[reg.date].push(reg);
-            });
-        
-        // Mapa de registos administrativos por data
-        const adminByDate = {};
-        (this.adminRegistries || [])
-            .filter(r => r.workerId === workerId)
-            .forEach(reg => {
-                if (!adminByDate[reg.date]) {
-                    adminByDate[reg.date] = [];
-                }
-                adminByDate[reg.date].push(reg);
-            });
-        
-        // Processar todos os dias do mês
-        for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
-            const dateStr = d.toISOString().split('T')[0];
-            const dayOfWeek = d.getDay();
-            
-            if (dayOfWeek === 0 || dayOfWeek === 6) continue;
-            
-            const daySchedule = schedule.find(s => s.day === dayOfWeek);
-            if (!daySchedule) continue;
-            
-            const refHours = this.calculateReferenceHours(daySchedule);
-            totalReference += refHours;
-            
-            const adminRegs = adminByDate[dateStr] || [];
-            
-            if (adminRegs.length > 0) {
-                adminRegs.forEach(adminReg => {
-                    switch(adminReg.type) {
-                        case 'justified':
-                            justifiedAbsence += adminReg.hours;
-                            break;
-                        case 'vacation':
-                            vacation += adminReg.hours;
-                            break;
-                        case 'training':
-                            training += adminReg.hours;
-                            break;
-                        // IGNORAR unjustified - já está no banco de horas
-                    }
-                });
-            } else {
-                const dayRegistries = registriesByDate[dateStr] || [];
-                if (dayRegistries.length > 0) {
-                    const workedHours = this.calculateWorkedHours(dayRegistries);
-                    totalWorked += workedHours;
-                }
-                // NÃO adicionar faltas aqui - já foram processadas automaticamente
-            }
-        }
-        
-        // OBTER SALDO ATUAL DO BANCO DE HORAS
-        const bankData = this.getBankBalance(workerId);
-        const bankHours = bankData.hours;
-        const bankValue = bankData.value;
-        
-        console.log(`📊 Resumo final:`, {
-            'Horas Referência': totalReference.toFixed(2),
-            'Horas Trabalhadas': totalWorked.toFixed(2),
-            'Faltas Justificadas': justifiedAbsence.toFixed(2),
-            'Férias': vacation.toFixed(2),
-            'Formação': training.toFixed(2),
-            'Banco Horas (saldo)': bankHours.toFixed(2)
-        });
-        
-        const report = {
-            id: Date.now(),
-            workerId: workerId,
-            year: year,
-            month: month,
-            totalReference: parseFloat(totalReference.toFixed(2)),
-            totalWorked: parseFloat(totalWorked.toFixed(2)),
-            justifiedAbsence: parseFloat(justifiedAbsence.toFixed(2)),
-            unjustifiedAbsence: 0,
-            vacation: parseFloat(vacation.toFixed(2)),
-            training: parseFloat(training.toFixed(2)),
-            horasExtras: 0,
-            horasFaltadas: 0,
-            hoursBank: parseFloat(bankHours.toFixed(2)),
-            bankValue: parseFloat(bankValue.toFixed(2)),
-            deductionValue: 0,
-            generatedAt: new Date().toISOString()
-        };
-        
-        if (!skipSave) {
-            const existingIndex = this.reports.findIndex(r => 
-                r.workerId === workerId && r.year === year && r.month === month
-            );
-            if (existingIndex !== -1) {
-                this.reports.splice(existingIndex, 1);
-            }
-            
-            this.reports.push(report);
-            this.saveAllData();
-            
-            this.showNotification(`Relatório gerado para ${worker.name} - ${month}/${year}`, 'success');
-        }
-        
-        return report;
+generateMonthlyReport(workerId, year, month, skipSave = false) {
+    const worker = this.workers.find(w => w.id === workerId);
+    if (!worker) {
+        console.log('Trabalhador não encontrado');
+        return null;
     }
+    
+    console.log(`📊 Gerando relatório para ${worker.name} - ${month}/${year}`);
+    
+    // Se o trabalhador não tem horário, criar um padrão
+    if (!this.schedules[workerId]) {
+        this.schedules[workerId] = {
+            reference: [
+                { day: 1, start: '09:00', end: '17:00', break: '13:00-14:00' },
+                { day: 2, start: '09:00', end: '17:00', break: '13:00-14:00' },
+                { day: 3, start: '09:00', end: '17:00', break: '13:00-14:00' },
+                { day: 4, start: '09:00', end: '17:00', break: '13:00-14:00' },
+                { day: 5, start: '09:00', end: '17:00', break: '13:00-14:00' }
+            ]
+        };
+    }
+    
+    const startDate = new Date(year, month - 1, 1);
+    const endDate = new Date(year, month, 0);
+    
+    let totalWorked = 0;
+    let totalReference = 0;
+    let justifiedAbsence = 0;
+    let vacation = 0;
+    let training = 0;
+    
+    const schedule = this.schedules[workerId]?.reference || [];
+    
+    // Mapa de registos de ponto por data
+    const registriesByDate = {};
+    this.registries
+        .filter(r => r.workerId === workerId)
+        .forEach(reg => {
+            if (!registriesByDate[reg.date]) {
+                registriesByDate[reg.date] = [];
+            }
+            registriesByDate[reg.date].push(reg);
+        });
+    
+    // Mapa de registos administrativos por data
+    const adminByDate = {};
+    (this.adminRegistries || [])
+        .filter(r => r.workerId === workerId)
+        .forEach(reg => {
+            if (!adminByDate[reg.date]) {
+                adminByDate[reg.date] = [];
+            }
+            adminByDate[reg.date].push(reg);
+        });
+    
+    // Processar todos os dias do mês
+    for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+        const dateStr = d.toISOString().split('T')[0];
+        const dayOfWeek = d.getDay();
+        
+        if (dayOfWeek === 0 || dayOfWeek === 6) continue;
+        
+        const daySchedule = schedule.find(s => s.day === dayOfWeek);
+        if (!daySchedule) continue;
+        
+        const refHours = this.calculateReferenceHours(daySchedule);
+        totalReference += refHours;
+        
+        const adminRegs = adminByDate[dateStr] || [];
+        
+        if (adminRegs.length > 0) {
+            adminRegs.forEach(adminReg => {
+                switch(adminReg.type) {
+                    case 'justified':
+                        justifiedAbsence += adminReg.hours;
+                        break;
+                    case 'vacation':
+                        vacation += adminReg.hours;
+                        break;
+                    case 'training':
+                        training += adminReg.hours;
+                        break;
+                }
+            });
+        } else {
+            const dayRegistries = registriesByDate[dateStr] || [];
+            if (dayRegistries.length > 0) {
+                const workedHours = this.calculateWorkedHours(dayRegistries);
+                totalWorked += workedHours;
+            }
+        }
+    }
+    
+    // OBTER SALDO ATUAL DO BANCO DE HORAS
+    const bankData = this.getBankBalance(workerId);
+    const bankHours = bankData.hours;
+    const bankValue = bankData.value;
+    
+    console.log(`📊 Resumo final:`, {
+        'Horas Referência': totalReference.toFixed(2),
+        'Horas Trabalhadas': totalWorked.toFixed(2),
+        'Faltas Justificadas': justifiedAbsence.toFixed(2),
+        'Férias': vacation.toFixed(2),
+        'Formação': training.toFixed(2),
+        'Banco Horas (saldo)': bankHours.toFixed(2)
+    });
+    
+    const report = {
+        id: Date.now(),
+        workerId: workerId,
+        year: year,
+        month: month,
+        totalReference: parseFloat(totalReference.toFixed(2)),
+        totalWorked: parseFloat(totalWorked.toFixed(2)),
+        justifiedAbsence: parseFloat(justifiedAbsence.toFixed(2)),
+        unjustifiedAbsence: 0,
+        vacation: parseFloat(vacation.toFixed(2)),
+        training: parseFloat(training.toFixed(2)),
+        horasExtras: 0,
+        horasFaltadas: 0,
+        hoursBank: parseFloat(bankHours.toFixed(2)),
+        bankValue: parseFloat(bankValue.toFixed(2)),
+        deductionValue: 0,
+        generatedAt: new Date().toISOString()
+    };
+    
+    if (!skipSave) {
+        // Remover relatório existente se houver
+        const existingIndex = this.reports.findIndex(r => 
+            r.workerId === workerId && r.year === year && r.month === month
+        );
+        if (existingIndex !== -1) {
+            this.reports.splice(existingIndex, 1);
+        }
+        
+        this.reports.push(report);
+        this.saveAllData();
+    }
+    
+    return report;
+}
 
     calculateReferenceHours(schedule) {
         if (!schedule.start || !schedule.end) return 0;

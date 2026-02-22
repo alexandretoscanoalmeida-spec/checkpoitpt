@@ -1181,7 +1181,9 @@ class AdminInterface {
         
         document.getElementById('modalContainer').appendChild(modal);
         
-        modal.querySelector('.close-modal').addEventListener('click', () => this.closeModal(modal));
+        modal.querySelectorAll('.close-modal').forEach(btn => {
+    btn.addEventListener('click', () => this.closeModal(modal));
+});
         
         const btnAddRole = modal.querySelector('#btnAddRole');
         if (btnAddRole) {
@@ -1267,7 +1269,9 @@ class AdminInterface {
         
         document.getElementById('modalContainer').appendChild(modal);
         
-        modal.querySelector('.close-modal').addEventListener('click', () => this.closeModal(modal));
+        modal.querySelectorAll('.close-modal').forEach(btn => {
+    btn.addEventListener('click', () => this.closeModal(modal));
+});
         
         const btnSaveRole = modal.querySelector('#btnSaveRole');
         if (btnSaveRole) {
@@ -1358,7 +1362,9 @@ class AdminInterface {
         
         document.getElementById('modalContainer').appendChild(modal);
         
-        modal.querySelector('.close-modal').addEventListener('click', () => this.closeModal(modal));
+        modal.querySelectorAll('.close-modal').forEach(btn => {
+    btn.addEventListener('click', () => this.closeModal(modal));
+});
         
         const btnUpdateRole = modal.querySelector('#btnUpdateRole');
         if (btnUpdateRole) {
@@ -1516,7 +1522,9 @@ class AdminInterface {
         
         document.getElementById('modalContainer').appendChild(modal);
         
-        modal.querySelector('.close-modal').addEventListener('click', () => this.closeModal(modal));
+        modal.querySelectorAll('.close-modal').forEach(btn => {
+    btn.addEventListener('click', () => this.closeModal(modal));
+});
         
         const btnSaveWorkerEdit = modal.querySelector('#btnSaveWorkerEdit');
         if (btnSaveWorkerEdit) {
@@ -1658,7 +1666,9 @@ class AdminInterface {
         
         document.getElementById('modalContainer').appendChild(modal);
         
-        modal.querySelector('.close-modal').addEventListener('click', () => this.closeModal(modal));
+        modal.querySelectorAll('.close-modal').forEach(btn => {
+    btn.addEventListener('click', () => this.closeModal(modal));
+});
         
         const btnSaveNewWorker = modal.querySelector('#btnSaveNewWorker');
         if (btnSaveNewWorker) {
@@ -2124,7 +2134,9 @@ class AdminInterface {
         
         document.getElementById('modalContainer').appendChild(modal);
         
-        modal.querySelector('.close-modal').addEventListener('click', () => this.closeModal(modal));
+        modal.querySelectorAll('.close-modal').forEach(btn => {
+    btn.addEventListener('click', () => this.closeModal(modal));
+});
         
         const btnSaveAdminRegistry = modal.querySelector('#btnSaveAdminRegistry');
         if (btnSaveAdminRegistry) {
@@ -2968,7 +2980,9 @@ class AdminInterface {
         
         document.getElementById('modalContainer').appendChild(modal);
         
-        modal.querySelector('.close-modal').addEventListener('click', () => this.closeModal(modal));
+        modal.querySelectorAll('.close-modal').forEach(btn => {
+    btn.addEventListener('click', () => this.closeModal(modal));
+});
         
         const btnExportThisReport = modal.querySelector('#btnExportThisReport');
         if (btnExportThisReport) {
@@ -3645,7 +3659,9 @@ class AdminInterface {
         
         document.getElementById('modalContainer').appendChild(modal);
         
-        modal.querySelector('.close-modal').addEventListener('click', () => this.closeModal(modal));
+        modal.querySelectorAll('.close-modal').forEach(btn => {
+    btn.addEventListener('click', () => this.closeModal(modal));
+});
         
         const btnAddTemplate = modal.querySelector('#btnAddTemplate');
         if (btnAddTemplate) {
@@ -3768,7 +3784,9 @@ class AdminInterface {
         
         document.getElementById('modalContainer').appendChild(modal);
         
-        modal.querySelector('.close-modal').addEventListener('click', () => this.closeModal(modal));
+        modal.querySelectorAll('.close-modal').forEach(btn => {
+    btn.addEventListener('click', () => this.closeModal(modal));
+});
         
         const btnSaveTemplate = modal.querySelector('#btnSaveTemplate');
         if (btnSaveTemplate) {
@@ -3785,80 +3803,94 @@ class AdminInterface {
     }
 
     loadTemplateDaysEditor() {
-        const tbody = document.getElementById('templateDaysTable');
-        if (!tbody) return;
+    const tbody = document.getElementById('templateDaysTable');
+    if (!tbody) return;
+    
+    tbody.innerHTML = '';
+    
+    const days = [
+        { id: 1, name: 'Segunda-feira' },
+        { id: 2, name: 'Terça-feira' },
+        { id: 3, name: 'Quarta-feira' },
+        { id: 4, name: 'Quinta-feira' },
+        { id: 5, name: 'Sexta-feira' }
+    ];
+    
+    days.forEach(day => {
+        const row = document.createElement('tr');
         
-        tbody.innerHTML = '';
+        // Dia da semana
+        const dayCell = document.createElement('td');
+        dayCell.textContent = day.name;
+        row.appendChild(dayCell);
         
-        const days = [
-            { id: 1, name: 'Segunda-feira' },
-            { id: 2, name: 'Terça-feira' },
-            { id: 3, name: 'Quarta-feira' },
-            { id: 4, name: 'Quinta-feira' },
-            { id: 5, name: 'Sexta-feira' }
-        ];
+        // COLUNA ENTRADA - classe específica
+        const startCell = document.createElement('td');
+        const startInput = document.createElement('input');
+        startInput.type = 'time';
+        startInput.value = '09:00';
+        startInput.dataset.day = day.id;
+        startInput.className = 'template-start-input'; // Classe DISTINTA para entrada
+        startInput.setAttribute('data-field', 'start'); // Atributo adicional para segurança
+        startCell.appendChild(startInput);
+        row.appendChild(startCell);
         
-        days.forEach(day => {
-            const row = document.createElement('tr');
-            
-            const dayCell = document.createElement('td');
-            dayCell.textContent = day.name;
-            
-            const startCell = document.createElement('td');
-            const startInput = document.createElement('input');
-            startInput.type = 'time';
-            startInput.value = '09:00';
-            startInput.dataset.day = day.id;
-            startInput.className = 'template-time-input';
-            startCell.appendChild(startInput);
-            
-            const endCell = document.createElement('td');
-            const endInput = document.createElement('input');
-            endInput.type = 'time';
-            endInput.value = '17:00';
-            endInput.dataset.day = day.id;
-            endInput.className = 'template-time-input';
-            endCell.appendChild(endInput);
-            
-            const breakCell = document.createElement('td');
-            const breakInput = document.createElement('input');
-            breakInput.type = 'text';
-            breakInput.placeholder = '13:00-14:00';
-            breakInput.value = '13:00-14:00';
-            breakInput.dataset.day = day.id;
-            breakInput.className = 'template-break-input';
-            breakCell.appendChild(breakInput);
-            
-            const hoursCell = document.createElement('td');
-            hoursCell.className = 'template-day-hours';
-            hoursCell.dataset.day = day.id;
-            hoursCell.textContent = '7.0h';
-            
-            row.appendChild(dayCell);
-            row.appendChild(startCell);
-            row.appendChild(endCell);
-            row.appendChild(breakCell);
-            row.appendChild(hoursCell);
-            tbody.appendChild(row);
-            
-            this.calculateTemplateDayHours(day.id, '09:00', '17:00', '13:00-14:00');
-            
-            startInput.addEventListener('change', () => {
-                this.calculateTemplateDayHours(day.id, startInput.value, endInput.value, breakInput.value);
-                this.updateTemplateTotalHours();
-            });
-            endInput.addEventListener('change', () => {
-                this.calculateTemplateDayHours(day.id, startInput.value, endInput.value, breakInput.value);
-                this.updateTemplateTotalHours();
-            });
-            breakInput.addEventListener('change', () => {
-                this.calculateTemplateDayHours(day.id, startInput.value, endInput.value, breakInput.value);
-                this.updateTemplateTotalHours();
-            });
-        });
+        // COLUNA SAÍDA - classe específica
+        const endCell = document.createElement('td');
+        const endInput = document.createElement('input');
+        endInput.type = 'time';
+        endInput.value = '17:00';
+        endInput.dataset.day = day.id;
+        endInput.className = 'template-end-input'; // Classe DISTINTA para saída
+        endInput.setAttribute('data-field', 'end');
+        endCell.appendChild(endInput);
+        row.appendChild(endCell);
         
-        this.updateTemplateTotalHours();
-    }
+        // COLUNA PAUSA
+        const breakCell = document.createElement('td');
+        const breakInput = document.createElement('input');
+        breakInput.type = 'text';
+        breakInput.placeholder = '13:00-14:00';
+        breakInput.value = '13:00-14:00';
+        breakInput.dataset.day = day.id;
+        breakInput.className = 'template-break-input';
+        breakCell.appendChild(breakInput);
+        row.appendChild(breakCell);
+        
+        // COLUNA HORAS (calculadas automaticamente)
+        const hoursCell = document.createElement('td');
+        hoursCell.className = 'template-day-hours';
+        hoursCell.dataset.day = day.id;
+        hoursCell.textContent = '8.0h'; // 9h-17h = 8h, com pausa de 1h = 7h? Vamos calcular certo
+        row.appendChild(hoursCell);
+        
+        tbody.appendChild(row);
+        
+        // FUNÇÃO PARA CALCULAR HORAS DESTE DIA
+        const updateDayHours = () => {
+            const hours = this.calculateTemplateDayHours(
+                day.id,
+                startInput.value,
+                endInput.value,
+                breakInput.value
+            );
+            hoursCell.textContent = hours.toFixed(1) + 'h';
+            this.updateTemplateTotalHours();
+        };
+        
+        // Adicionar event listeners para atualizar em tempo real
+        startInput.addEventListener('change', updateDayHours);
+        endInput.addEventListener('change', updateDayHours);
+        breakInput.addEventListener('change', updateDayHours);
+        
+        // Calcular horas iniciais
+        setTimeout(() => {
+            updateDayHours();
+        }, 10);
+    });
+    
+    this.updateTemplateTotalHours();
+}
 
     calculateTemplateDayHours(day, start, end, breakTime) {
         const startMinutes = window.PontoApp.timeToMinutes(start);
@@ -3883,117 +3915,148 @@ class AdminInterface {
     }
 
     updateTemplateTotalHours() {
-        let total = 0;
+    let total = 0;
+    
+    for (let day = 1; day <= 5; day++) {
+        // ✅ CORREÇÃO: Usar as novas classes
+        const startInput = document.querySelector(`.template-start-input[data-day="${day}"]`);
+        const endInput = document.querySelector(`.template-end-input[data-day="${day}"]`);
+        const breakInput = document.querySelector(`.template-break-input[data-day="${day}"]`);
         
-        for (let day = 1; day <= 5; day++) {
-            const startInput = document.querySelector(`.template-time-input[data-day="${day}"]:not([placeholder*="-"])`);
-            const endInput = document.querySelector(`.template-time-input[data-day="${day}"]:not([placeholder*="Pausa"])`);
-            const breakInput = document.querySelector(`.template-break-input[data-day="${day}"]`);
-            
-            if (startInput && endInput) {
-                const hours = this.calculateTemplateDayHours(
-                    day,
-                    startInput.value,
-                    endInput.value,
-                    breakInput?.value || ''
-                );
-                total += hours;
-            }
-        }
-        
-        const totalElement = document.getElementById('templateTotalHours');
-        if (totalElement) {
-            totalElement.textContent = total.toFixed(1);
+        if (startInput && endInput) {
+            const hours = this.calculateTemplateDayHours(
+                day,
+                startInput.value,
+                endInput.value,
+                breakInput?.value || ''
+            );
+            total += hours;
         }
     }
+    
+    const totalElement = document.getElementById('templateTotalHours');
+    if (totalElement) {
+        totalElement.textContent = total.toFixed(1);
+    }
+}
 
     saveTemplate() {
-        const templateName = document.getElementById('templateName')?.value;
-        if (!templateName) {
-            window.PontoApp.showNotification('Digite um nome para o horário!', 'error');
-            return;
-        }
+    console.log('💾 A guardar novo horário...');
+    
+    const templateName = document.getElementById('templateName')?.value;
+    if (!templateName) {
+        window.PontoApp.showNotification('Digite um nome para o horário!', 'error');
+        return;
+    }
+    
+    const days = [];
+    let totalHours = 0;
+    
+    // Percorrer os dias da semana (1 = Segunda, 5 = Sexta)
+    for (let day = 1; day <= 5; day++) {
+        // USAR AS CLASSES ESPECÍFICAS CRIADAS ACIMA
+        const startInput = document.querySelector(`.template-start-input[data-day="${day}"]`);
+        const endInput = document.querySelector(`.template-end-input[data-day="${day}"]`);
+        const breakInput = document.querySelector(`.template-break-input[data-day="${day}"]`);
         
-        const days = [];
-        let totalHours = 0;
-        
-        for (let day = 1; day <= 5; day++) {
-            const startInput = document.querySelector(`.template-time-input[data-day="${day}"]:not([placeholder*="-"])`);
-            const endInput = document.querySelector(`.template-time-input[data-day="${day}"]:not([placeholder*="Pausa"])`);
-            const breakInput = document.querySelector(`.template-break-input[data-day="${day}"]`);
+        // Verificar se os inputs existem e têm valores
+        if (startInput && endInput && startInput.value && endInput.value) {
             
-            if (startInput && endInput && startInput.value && endInput.value) {
-                const dayHours = this.calculateTemplateDayHours(
-                    day,
-                    startInput.value,
-                    endInput.value,
-                    breakInput?.value || ''
-                );
-                totalHours += dayHours;
-                
-                days.push({
-                    day: day,
-                    start: startInput.value,
-                    end: endInput.value,
-                    break: breakInput?.value || ''
-                });
-            }
+            // Calcular horas deste dia específico
+            const dayHours = this.calculateTemplateDayHours(
+                day,
+                startInput.value,
+                endInput.value,
+                breakInput?.value || ''
+            );
+            
+            totalHours += dayHours;
+            
+            // Adicionar ao array de dias
+            days.push({
+                day: day,
+                start: startInput.value,
+                end: endInput.value,
+                break: breakInput?.value || ''
+            });
+            
+            console.log(`   Dia ${day}: ${startInput.value} - ${endInput.value} = ${dayHours.toFixed(1)}h`);
+        } else {
+            console.warn(`   Dia ${day}: inputs não encontrados ou vazios`);
         }
-        
-        if (days.length === 0) {
-            window.PontoApp.showNotification('Configure pelo menos um dia de trabalho!', 'error');
-            return;
-        }
-        
-        const newTemplate = {
-            id: Date.now(),
-            name: templateName,
-            days: days,
-            totalHours: totalHours
-        };
-        
-        window.PontoApp.scheduleTemplates.push(newTemplate);
-        localStorage.setItem('ponto_schedule_templates', JSON.stringify(window.PontoApp.scheduleTemplates));
-        
-        window.PontoApp.showNotification('Horário predefinido adicionado com sucesso!', 'success');
-        
-        const modal = document.querySelector('.modal.active');
-        if (modal) {
-            this.closeModal(modal);
-        }
-        
+    }
+    
+    // Validar se pelo menos um dia foi configurado
+    if (days.length === 0) {
+        window.PontoApp.showNotification('Configure pelo menos um dia de trabalho!', 'error');
+        return;
+    }
+    
+    // CRIAR O NOVO TEMPLATE
+    const newTemplate = {
+        id: Date.now(), // ID único baseado no timestamp
+        name: templateName,
+        days: days,
+        totalHours: parseFloat(totalHours.toFixed(1)) // Arredondar para 1 casa decimal
+    };
+    
+    // Adicionar ao array global
+    if (!window.PontoApp.scheduleTemplates) {
+        window.PontoApp.scheduleTemplates = [];
+    }
+    
+    window.PontoApp.scheduleTemplates.push(newTemplate);
+    
+    // Guardar no localStorage
+    localStorage.setItem('ponto_schedule_templates', JSON.stringify(window.PontoApp.scheduleTemplates));
+    
+    console.log('✅ HORÁRIO CRIADO COM SUCESSO:', newTemplate);
+    
+    // Notificar o utilizador
+    window.PontoApp.showNotification('Horário predefinido adicionado com sucesso!', 'success');
+    
+    // Fechar o modal atual
+    const modal = document.querySelector('.modal.active');
+    if (modal) {
+        this.closeModal(modal);
+    }
+    
+    // Recarregar a lista de templates (se o modal de gestão estiver aberto)
+    setTimeout(() => {
         const templatesModal = document.querySelector('.modal.active');
-        if (templatesModal) {
+        if (templatesModal && templatesModal.querySelector('#templatesList')) {
             this.loadTemplatesList();
         }
-    }
+    }, 300);
+}
 
     editTemplate(templateId) {
-        console.log('Editando template:', templateId);
-        if (confirm('Para editar, é melhor criar um novo horário com as alterações. Deseja criar um novo baseado neste?')) {
-            const template = window.PontoApp.scheduleTemplates.find(t => t.id === templateId);
-            if (template) {
-                this.showAddTemplateModal();
-                
-                setTimeout(() => {
-                    document.getElementById('templateName').value = template.name + ' (Cópia)';
-                    template.days.forEach(day => {
-                        const startInput = document.querySelector(`.template-time-input[data-day="${day.day}"]:not([placeholder*="-"])`);
-                        const endInput = document.querySelector(`.template-time-input[data-day="${day.day}"]:not([placeholder*="Pausa"])`);
-                        const breakInput = document.querySelector(`.template-break-input[data-day="${day.day}"]`);
-                        
-                        if (startInput) startInput.value = day.start;
-                        if (endInput) endInput.value = day.end;
-                        if (breakInput) breakInput.value = day.break || '';
-                        
-                        this.calculateTemplateDayHours(day.day, day.start, day.end, day.break || '');
-                    });
+    console.log('Editando template:', templateId);
+    if (confirm('Para editar, é melhor criar um novo horário com as alterações. Deseja criar um novo baseado neste?')) {
+        const template = window.PontoApp.scheduleTemplates.find(t => t.id === templateId);
+        if (template) {
+            this.showAddTemplateModal();
+            
+            setTimeout(() => {
+                document.getElementById('templateName').value = template.name + ' (Cópia)';
+                template.days.forEach(day => {
+                    // ✅ CORREÇÃO: Usar as novas classes
+                    const startInput = document.querySelector(`.template-start-input[data-day="${day.day}"]`);
+                    const endInput = document.querySelector(`.template-end-input[data-day="${day.day}"]`);
+                    const breakInput = document.querySelector(`.template-break-input[data-day="${day.day}"]`);
                     
-                    this.updateTemplateTotalHours();
-                }, 100);
-            }
+                    if (startInput) startInput.value = day.start;
+                    if (endInput) endInput.value = day.end;
+                    if (breakInput) breakInput.value = day.break || '';
+                    
+                    this.calculateTemplateDayHours(day.day, day.start, day.end, day.break || '');
+                });
+                
+                this.updateTemplateTotalHours();
+            }, 100);
         }
     }
+}
 
     deleteTemplate(templateId) {
         if (confirm('Tem certeza que deseja excluir este horário predefinido?')) {
@@ -4037,7 +4100,9 @@ class AdminInterface {
         
         document.getElementById('modalContainer').appendChild(modal);
         
-        modal.querySelector('.close-modal').addEventListener('click', () => this.closeModal(modal));
+        modal.querySelectorAll('.close-modal').forEach(btn => {
+    btn.addEventListener('click', () => this.closeModal(modal));
+});
         
         const btnConfirmImport = modal.querySelector('#btnConfirmImport');
         if (btnConfirmImport) {
@@ -4098,7 +4163,9 @@ class AdminInterface {
         
         document.getElementById('modalContainer').appendChild(modal);
         
-        modal.querySelector('.close-modal').addEventListener('click', () => this.closeModal(modal));
+        modal.querySelectorAll('.close-modal').forEach(btn => {
+    btn.addEventListener('click', () => this.closeModal(modal));
+});
         
         const btnGenerateReportFromModal = modal.querySelector('#btnGenerateReportFromModal');
         if (btnGenerateReportFromModal) {
@@ -4163,7 +4230,9 @@ class AdminInterface {
         
         document.getElementById('modalContainer').appendChild(modal);
         
-        modal.querySelector('.close-modal').addEventListener('click', () => this.closeModal(modal));
+        modal.querySelectorAll('.close-modal').forEach(btn => {
+    btn.addEventListener('click', () => this.closeModal(modal));
+});
         
         setTimeout(() => {
             window.PontoApp.generateQRCodeElement(worker.id, 'workerQRCode', 250);
