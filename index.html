@@ -361,93 +361,76 @@
 						if (pin) {
     console.log('📱 PIN lido:', pin);
     
-    // 1. Preencher o campo PIN
+    // Guardar referências
     const pinInput = document.getElementById('userPin');
+    const form = document.getElementById('loginForm');
+    const userTypeSelect = document.getElementById('userType');
+    
+    if (!pinInput || !form || !userTypeSelect) {
+        console.error('❌ Elementos do formulário não encontrados');
+        stopQRReader();
+        return;
+    }
+    
+    // Preencher PIN
     pinInput.value = pin;
-    
-    // 2. Validar o PIN no cliente (remover atributos que possam bloquear)
     pinInput.removeAttribute('required');
-    pinInput.setCustomValidity(''); // Limpar qualquer validação personalizada
+    pinInput.setCustomValidity('');
     
-    // 3. Parar o leitor
-    stopQRReader();
-    
-    // 4. DETERMINAR AUTOMATICAMENTE O TIPO DE UTILIZADOR
-    if (window.PontoApp) {
-        // Garantir que os workers estão carregados
-        const workers = window.PontoApp.workers || [];
-        
-        // Tentar encontrar o worker
-        const worker = workers.find(w => w.pin === pin);
+    // Verificar PontoApp
+    if (window.PontoApp && window.PontoApp.workers) {
+        const worker = window.PontoApp.workers.find(w => w.pin === pin);
         
         if (worker) {
-            console.log(`✅ Trabalhador encontrado: ${worker.name} (Admin: ${worker.isAdmin})`);
-            
-            // Selecionar automaticamente o tipo correto no dropdown
-            const userTypeSelect = document.getElementById('userType');
+            console.log(`✅ Trabalhador: ${worker.name}`);
             userTypeSelect.value = worker.isAdmin ? 'admin' : 'worker';
             
-            // Desativar o dropdown para evitar alteração manual (opcional)
-            // userTypeSelect.disabled = true;
-            
-            // Mostrar notificação de sucesso
+            // Mostrar notificação
             if (window.PontoApp.showNotification) {
                 window.PontoApp.showNotification(`Bem-vindo, ${worker.name}!`, 'success');
-            } else {
-                alert(`Bem-vindo, ${worker.name}!`);
             }
             
-            // 5. DISPARAR EVENTO DE SUBMIT com pequeno delay
+            // Pequeno delay para garantir que tudo está atualizado
             setTimeout(() => {
-                const form = document.getElementById('loginForm');
-                
                 // Verificar se o formulário é válido
                 if (form.checkValidity()) {
+                    // Disparar submit
                     const submitEvent = new Event('submit', { 
-                        bubbles: true,        
-                        cancelable: true       
+                        bubbles: true, 
+                        cancelable: true 
                     });
                     form.dispatchEvent(submitEvent);
+                    
+                    // Só parar o leitor após o submit
+                    setTimeout(() => {
+                        stopQRReader();
+                        // Reativar required para futuros logins
+                        setTimeout(() => {
+                            pinInput.setAttribute('required', '');
+                        }, 500);
+                    }, 500);
+                    
                 } else {
-                    console.error('❌ Formulário inválido após preenchimento do QR');
-                    // Reativar o required como fallback
-                    pinInput.setAttribute('required', '');
-                    // Tentar submeter mesmo assim
-                    form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+                    console.error('❌ Formulário inválido');
+                    window.PontoApp.showNotification('Erro no formulário', 'error');
+                    stopQRReader();
                 }
-                
-                // Reativar o required após o submit (para futuras tentativas)
-                setTimeout(() => {
-                    pinInput.setAttribute('required', '');
-                    // userTypeSelect.disabled = false; // Se tiveres desativado
-                }, 1000);
-            }, 150);
+            }, 200);
             
         } else {
-            console.error(`❌ PIN ${pin} não encontrado na base de dados`);
-            
-            // PIN não encontrado - mostrar erro e reativar required
-            if (window.PontoApp.showNotification) {
-                window.PontoApp.showNotification('PIN não registado!', 'error');
-            } else {
-                alert('PIN não registado!');
-            }
-            
-            // Reativar validação
+            console.error(`❌ PIN não encontrado: ${pin}`);
+            window.PontoApp.showNotification('PIN não registado!', 'error');
             pinInput.setAttribute('required', '');
+            stopQRReader();
         }
     } else {
-        console.warn('⚠️ PontoApp não inicializado, usando fallback');
-        
-        // Fallback: apenas submeter o formulário
+        console.warn('⚠️ PontoApp não disponível');
         setTimeout(() => {
-            document.getElementById('loginForm').dispatchEvent(new Event('submit', { 
-                bubbles: true, 
-                cancelable: true 
-            }));
-        }, 500);
+            form.dispatchEvent(new Event('submit'));
+            setTimeout(stopQRReader, 500);
+        }, 200);
     }
-} 
+}
                         },
                         (errorMessage) => {
                             // Ignorar erros de leitura (normais durante o scanning)
