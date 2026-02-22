@@ -859,37 +859,41 @@ console.log('✅ Dados iniciais criados com sucesso!');
     }
 
     setupEventListeners() {
-        console.log('🔗 Configurando event listeners...');
-        
-        setTimeout(() => {
-            const loginForm = document.getElementById('loginForm');
-            if (loginForm) {
-                console.log('✅ Formulário de login encontrado');
-                
-                loginForm.addEventListener('submit', (e) => {
-                    console.log('📝 Formulário submetido');
+    console.log('🔗 Configurando event listeners...');
+    
+    setTimeout(() => {
+        const loginForm = document.getElementById('loginForm');
+        if (loginForm) {
+            console.log('✅ Formulário de login encontrado');
+            
+            // CORRETO: Passar o evento 'e'
+            loginForm.addEventListener('submit', (e) => {
+                console.log('📝 Formulário submetido');
+                this.handleLogin(e);  // ← PASSAR O EVENTO
+            });
+            
+            const submitBtn = loginForm.querySelector('button[type="submit"]');
+            if (submitBtn) {
+                // CORRETO: Disparar evento submit em vez de chamar handleLogin diretamente
+                submitBtn.addEventListener('click', (e) => {
                     e.preventDefault();
-                    e.stopPropagation();
-                    this.handleLogin();
-                });
-                
-                const submitBtn = loginForm.querySelector('button[type="submit"]');
-                if (submitBtn) {
-                    submitBtn.addEventListener('click', (e) => {
-                        e.preventDefault();
-                        this.handleLogin();
+                    const submitEvent = new Event('submit', { 
+                        bubbles: true, 
+                        cancelable: true 
                     });
-                }
-            } else {
-                console.warn('⚠️ Formulário de login não encontrado na página atual');
+                    loginForm.dispatchEvent(submitEvent);
+                });
             }
+        } else {
+            console.warn('⚠️ Formulário de login não encontrado na página atual');
+        }
 
-            const scanQRBtn = document.getElementById('scanQR');
-            if (scanQRBtn) {
-                scanQRBtn.addEventListener('click', () => this.toggleQRScanner());
-            }
-        }, 100);
-    }
+        const scanQRBtn = document.getElementById('scanQR');
+        if (scanQRBtn) {
+            scanQRBtn.addEventListener('click', () => this.toggleQRScanner());
+        }
+    }, 100);
+}
 
     handleLogin(e) {
     console.log('🔐 Processando login...');
@@ -1069,40 +1073,31 @@ console.log('✅ Dados iniciais criados com sucesso!');
     }
 
     checkAuth() {
-        console.log('🔒 Verificando autenticação...');
-        const currentPage = window.location.pathname.split('/').pop();
-        
-        if (currentPage === 'index.html' || currentPage === '' || currentPage.includes('index')) {
-            const user = sessionStorage.getItem('currentUser');
-            if (user) {
-                console.log('🔄 Usuário já autenticado, redirecionando...');
-                this.currentUser = JSON.parse(user);
-                this.isAdmin = sessionStorage.getItem('isAdmin') === 'true';
-                
-                setTimeout(() => {
-                    window.location.href = this.isAdmin ? 'admin.html' : 'worker.html';
-                }, 500);
-            }
-            return;
-        }
-        
+    console.log('🔒 Verificando autenticação...');
+    const currentPage = window.location.pathname.split('/').pop();
+    
+    // Se NÃO estiver na página de login, verificar autenticação
+    if (currentPage !== 'index.html' && currentPage !== '' && !currentPage.includes('index')) {
         const user = sessionStorage.getItem('currentUser');
         if (!user) {
             console.log('❌ Não autenticado, redirecionando para login');
             window.location.href = 'index.html';
-            return;
+        } else {
+            this.currentUser = JSON.parse(user);
+            this.isAdmin = sessionStorage.getItem('isAdmin') === 'true';
         }
-        
+        return;
+    }
+    
+    // NA PÁGINA DE LOGIN: NÃO redirecionar automaticamente
+    const user = sessionStorage.getItem('currentUser');
+    if (user) {
+        console.log('👤 Utilizador com sessão ativa na página de login - aguardando novo login');
         this.currentUser = JSON.parse(user);
         this.isAdmin = sessionStorage.getItem('isAdmin') === 'true';
-        
-        if (currentPage === 'admin.html' && !this.isAdmin) {
-            console.log('⚠️ Acesso não autorizado a admin, redirecionando');
-            window.location.href = 'worker.html';
-        }
-        
-        console.log('✅ Autenticação verificada');
+        // NÃO redirecionar - permitir novo login
     }
+}
 
     logout() {
         console.log('🚪 Realizando logout...');
