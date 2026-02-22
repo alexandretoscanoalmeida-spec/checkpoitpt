@@ -866,19 +866,15 @@ console.log('✅ Dados iniciais criados com sucesso!');
         if (loginForm) {
             console.log('✅ Formulário de login encontrado');
             
-            // CORREÇÃO 1: Passar o evento 'e' para handleLogin()
             loginForm.addEventListener('submit', (e) => {
                 console.log('📝 Formulário submetido');
-                // Não fazer preventDefault aqui - deixa o handleLogin() tratar
-                this.handleLogin(e);  // ← CORRIGIDO: passa o evento
+                this.handleLogin(e);
             });
             
             const submitBtn = loginForm.querySelector('button[type="submit"]');
             if (submitBtn) {
-                // CORREÇÃO 2: Também para o clique no botão
                 submitBtn.addEventListener('click', (e) => {
-                    e.preventDefault(); // Prevenir comportamento padrão do botão
-                    // Criar e disparar evento de submit no formulário
+                    e.preventDefault();
                     const submitEvent = new Event('submit', { 
                         bubbles: true, 
                         cancelable: true 
@@ -890,10 +886,11 @@ console.log('✅ Dados iniciais criados com sucesso!');
             console.warn('⚠️ Formulário de login não encontrado na página atual');
         }
 
-        const scanQRBtn = document.getElementById('scanQR');
-        if (scanQRBtn) {
-            scanQRBtn.addEventListener('click', () => this.toggleQRScanner());
-        }
+        // 🔴 COMENTADO PARA EVITAR CONFLITO COM O LEITOR DO INDEX.HTML
+        // const scanQRBtn = document.getElementById('scanQR');
+        // if (scanQRBtn) {
+        //     scanQRBtn.addEventListener('click', () => this.toggleQRScanner());
+        // }
     }, 100);
 }
 
@@ -1037,34 +1034,6 @@ console.log('✅ Dados iniciais criados com sucesso!');
     }, 1000);
     
     return true;
-}
-
-    toggleQRScanner() {
-    console.log('📱 Alternar scanner QR');
-    
-    // Delegar para o leitor no index.html
-    const scanQRBtn = document.getElementById('scanQR');
-    const qrReaderContainer = document.getElementById('qr-reader-container');
-    const closeBtn = document.getElementById('closeQRReader');
-    
-    if (!scanQRBtn || !qrReaderContainer) {
-        console.warn('Elementos do leitor QR não encontrados');
-        this.showNotification('Use o botão "Ler QR Code" no formulário', 'info');
-        return;
-    }
-    
-    // Verificar estado atual
-    if (qrReaderContainer.style.display === 'none' || qrReaderContainer.style.display === '') {
-        // Abrir o leitor - simular clique no botão principal
-        console.log('Abrindo leitor QR através do botão principal');
-        scanQRBtn.click();
-    } else {
-        // Fechar o leitor
-        if (closeBtn) {
-            console.log('Fechando leitor QR');
-            closeBtn.click();
-        }
-    }
 }
 
     checkAuth() {
