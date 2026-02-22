@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="styles.css">
     <link rel="manifest" href="manifest.json">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⏰</text></svg>">
-    <style>
+   <style>
     /* Estilos específicos para orientação horizontal em tablets */
     @media (min-width: 768px) and (orientation: landscape) {
         .login-container {
@@ -60,82 +60,113 @@
         }
         
         /* ===== ESTILOS CORRIGIDOS DO LEITOR QR ===== */
-#qr-reader-container {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: auto;
-    z-index: 10;
-    background: transparent;
-    display: none;
-    padding: 0;  /* ← ZERO padding */
-    margin: 0;   /* ← ZERO margin */
-}
+        #qr-reader-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: auto;
+            z-index: 10;
+            background: transparent;
+            display: none;
+            padding: 0;
+            margin: 0;
+        }
 
-#qr-reader {
-    width: 500px !important;
-    height: 500px !important;
-    min-height: 500px !important;
-    max-width: 500px !important;
-    max-height: 500px !important;
-    margin: 0 auto !important;  /* Centralizar horizontalmente */
-    padding: 0 !important;       /* ← ZERO padding */
-    border: none !important;
-    overflow: hidden !important;
-    background: transparent;
-    display: block !important;
-    box-shadow: none !important; /* Remover qualquer sombra */
-}
+        #qr-reader {
+            width: 500px !important;
+            height: 500px !important;
+            min-height: 500px !important;
+            max-width: 500px !important;
+            max-height: 500px !important;
+            margin: 0 auto !important;
+            padding: 0 !important;
+            border: none !important;
+            overflow: hidden !important;
+            background: #000;
+            display: block !important;
+            box-shadow: none !important;
+            position: relative;
+        }
 
-/* Ajustar o vídeo dentro do leitor */
-#qr-reader video {
-    width: 100% !important;
-    height: 100% !important;
-    object-fit: cover !important;
-    border-radius: 0 !important;
-}
+        /* ESCONDER TUDO da biblioteca EXCETO o vídeo */
+        #qr-reader * {
+            background: transparent !important;
+        }
 
-/* Ajustar a região de scan */
-#qr-reader__scan_region {
-    height: 100% !important;
-    background: transparent !important;
-    padding: 0 !important;
-    margin: 0 !important;
-}
+        #qr-reader__dashboard,
+        #qr-reader__dashboard_section,
+        #qr-reader__dashboard_section_csr,
+        #qr-reader__header_message,
+        #qr-reader__status_span,
+        #qr-reader__camera_selection,
+        #qr-reader__dashboard_section_swaplink,
+        #qr-reader__dashboard_section > div:not(#qr-reader__scan_region) {
+            display: none !important;
+        }
 
-/* Remover elementos desnecessários da biblioteca */
-#qr-reader__dashboard,
-#qr-reader__header_message,
-#qr-reader__scan_region > img,
-#qr-reader__status_span,
-#qr-reader__camera_selection {
-    display: none !important;
-}
+        /* Manter apenas a região de scan */
+        #qr-reader__scan_region {
+            display: block !important;
+            height: 100% !important;
+            width: 100% !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            position: relative !important;
+        }
 
-/* Ajustar o botão fechar - FORA do leitor */
-#closeQRReader {
-    margin-top: 10px !important;
-    width: 500px !important;
-    margin-left: auto !important;
-    margin-right: auto !important;
-    display: block !important;
-    position: relative;
-    z-index: 20;
-}
+        /* Garantir que o vídeo ocupa todo o espaço */
+        #qr-reader video {
+            width: 100% !important;
+            height: 100% !important;
+            object-fit: cover !important;
+            border-radius: 0 !important;
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+        }
 
-/* Garantir que não há espaços extras */
-.qr-login-section {
-    position: relative;
-}
+        /* Remover qualquer borda ou sombra */
+        #qr-reader__scan_region video {
+            border: none !important;
+            outline: none !important;
+        }
 
-/* Quando o leitor está aberto, ocupar todo o espaço */
-#qr-reader-container[style*="display: block"] {
-    display: flex !important;
-    flex-direction: column;
-    align-items: center;
-    justify-content: flex-start;
-}
+        /* Ajustar o botão fechar */
+        #closeQRReader {
+            margin-top: 10px !important;
+            width: 500px !important;
+            margin-left: auto !important;
+            margin-right: auto !important;
+            display: block !important;
+            position: relative;
+            z-index: 20;
+        }
+
+        /* Garantir que não há espaços extras */
+        .qr-login-section {
+            position: relative;
+        }
+
+        /* Quando o leitor está aberto */
+        #qr-reader-container[style*="display: block"] {
+            display: flex !important;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+        }
+        
+        .footer-left {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+            text-align: left;
+        }
+        
+        .login-footer {
+            display: none;
+        }
+    }
     
     /* Para tablets em geral */
     @media (min-width: 768px) {
@@ -154,87 +185,114 @@
             margin: 0 auto 20px;
         }
     }
+    
     /* Para mobile/vertical */
-@media (max-width: 767px) {
-    .login-container {
-        align-items: center;
+    @media (max-width: 767px) {
+        .login-container {
+            align-items: center;
+        }
+        
+        .login-header {
+            width: 100%;
+            max-width: 100%;
+            position: static;
+        }
+        
+        .login-form {
+            width: 100%;
+            max-width: 100%;
+        }
+        
+        .footer-left {
+            display: none;
+        }
+        
+        .login-footer {
+            display: block;
+        }
+        
+        /* ===== ESTILOS MOBILE CORRIGIDOS ===== */
+        #qr-reader-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 1000;
+            background: white;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        #qr-reader {
+            width: 100% !important;
+            height: auto !important;
+            aspect-ratio: 1/1 !important;
+            max-width: 500px !important;
+            margin: 0 auto !important;
+        }
+        
+        #closeQRReader {
+            margin-top: 20px !important;
+            width: 100% !important;
+            max-width: 500px !important;
+        }
     }
-    
-    .login-header {
-        width: 100%;
-        max-width: 100%;
-        position: static;
+
+    /* ===== CORREÇÃO PARA REMOVER INTERFACE DA BIBLIOTECA ===== */
+    /* Forçar remoção de todos os elementos de controle */
+    #qr-reader__dashboard,
+    #qr-reader__dashboard_section,
+    #qr-reader__dashboard_section_csr,
+    #qr-reader__header_message,
+    #qr-reader__status_span,
+    #qr-reader__camera_selection,
+    #qr-reader__dashboard_section_swaplink,
+    #qr-reader__dashboard_section > div {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        height: 0 !important;
+        width: 0 !important;
+        overflow: hidden !important;
+        position: absolute !important;
+        pointer-events: none !important;
     }
-    
-    .login-form {
-        width: 100%;
-        max-width: 100%;
+
+    /* Garantir que apenas o vídeo é visível */
+    #qr-reader video {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
     }
-    
-    .footer-left {
+
+    /* ===== CORREÇÃO DEFINITIVA - ESCONDER ELEMENTOS SOBREPOSTOS ===== */
+    /* Quando o leitor está aberto, esconder o título e o botão */
+    #qr-reader-container[style*="display: block"] {
+        margin-top: 0 !important;
+    }
+
+    /* Esconder o título "Login por QR Code" quando o leitor abre */
+    #qr-reader-container[style*="display: block"] + *,
+    #qr-reader-container[style*="display: block"] ~ * {
         display: none;
     }
-    
-    .login-footer {
-        display: block;
-    }
-    
-    /* ===== ESTILOS MOBILE CORRIGIDOS ===== */
-    #qr-reader-container {
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        z-index: 1000;
-        background: white;
-        padding: 20px;
-        overflow-y: auto;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-    }
-    
-    #qr-reader {
-        width: 100% !important;
-        height: auto !important;
-        aspect-ratio: 1/1 !important;
-        max-width: 500px !important;
-        margin: 0 auto !important;
-    }
-    
-    #closeQRReader {
-        margin-top: 20px !important;
-        width: 100% !important;
-        max-width: 500px !important;
-    }
-}
 
-/* ===== CORREÇÃO DEFINITIVA - ESCONDER ELEMENTOS SOBREPOSTOS ===== */
-/* Este bloco DEVE estar FORA da media query */
-/* Quando o leitor está aberto, esconder o título e o botão */
-#qr-reader-container[style*="display: block"] {
-    margin-top: 0 !important;
-}
+    /* Forma mais direta de esconder */
+    body:has(#qr-reader-container[style*="display: block"]) .login-form h2,
+    body:has(#qr-reader-container[style*="display: block"]) #scanQR {
+        display: none !important;
+    }
 
-/* Esconder o título "Login por QR Code" quando o leitor abre */
-#qr-reader-container[style*="display: block"] + *,
-#qr-reader-container[style*="display: block"] ~ * {
-    display: none;
-}
-
-/* Forma mais direta de esconder */
-body:has(#qr-reader-container[style*="display: block"]) .login-form h2,
-body:has(#qr-reader-container[style*="display: block"]) #scanQR {
-    display: none !important;
-}
-
-/* Garantir que o leitor fica no topo */
-body:has(#qr-reader-container[style*="display: block"]) .qr-login-section {
-    margin-top: 0;
-    padding-top: 0;
-}    
+    /* Garantir que o leitor fica no topo */
+    body:has(#qr-reader-container[style*="display: block"]) .qr-login-section {
+        margin-top: 0;
+        padding-top: 0;
+    }
 </style>
 </head>
 <body>
