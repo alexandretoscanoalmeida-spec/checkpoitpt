@@ -859,51 +859,48 @@ console.log('✅ Dados iniciais criados com sucesso!');
     }
 
     setupEventListeners() {
-    console.log('🔗 Configurando event listeners...');
-    
-    setTimeout(() => {
-        const loginForm = document.getElementById('loginForm');
-        if (loginForm) {
-            console.log('✅ Formulário de login encontrado');
-            
-            loginForm.addEventListener('submit', (e) => {
-                console.log('📝 Formulário submetido');
-                this.handleLogin(e);
-            });
-            
-            const submitBtn = loginForm.querySelector('button[type="submit"]');
-            if (submitBtn) {
-                submitBtn.addEventListener('click', (e) => {
+        console.log('🔗 Configurando event listeners...');
+        
+        setTimeout(() => {
+            const loginForm = document.getElementById('loginForm');
+            if (loginForm) {
+                console.log('✅ Formulário de login encontrado');
+                
+                loginForm.addEventListener('submit', (e) => {
+                    console.log('📝 Formulário submetido');
                     e.preventDefault();
-                    const submitEvent = new Event('submit', { 
-                        bubbles: true, 
-                        cancelable: true 
-                    });
-                    loginForm.dispatchEvent(submitEvent);
+                    e.stopPropagation();
+                    this.handleLogin();
                 });
+                
+                const submitBtn = loginForm.querySelector('button[type="submit"]');
+                if (submitBtn) {
+                    submitBtn.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        this.handleLogin();
+                    });
+                }
+            } else {
+                console.warn('⚠️ Formulário de login não encontrado na página atual');
             }
-        } else {
-            console.warn('⚠️ Formulário de login não encontrado na página atual');
-        }
 
-        // 🔴 COMENTADO PARA EVITAR CONFLITO COM O LEITOR DO INDEX.HTML
-        // const scanQRBtn = document.getElementById('scanQR');
-        // if (scanQRBtn) {
-        //     scanQRBtn.addEventListener('click', () => this.toggleQRScanner());
-        // }
-    }, 100);
-}
+            const scanQRBtn = document.getElementById('scanQR');
+            if (scanQRBtn) {
+                scanQRBtn.addEventListener('click', () => this.toggleQRScanner());
+            }
+        }, 100);
+    }
 
-    async handleLogin(e) {
+    handleLogin(e) {
     console.log('🔐 Processando login...');
     
-    // ===== PARTE 1: PREVENIR COMPORTAMENTO PADRÃO =====
+    // ===== CORREÇÃO: Verificar se e existe e é um evento =====
     if (e && typeof e.preventDefault === 'function') {
         e.preventDefault();
         e.stopPropagation();
     }
     
-    // ===== PARTE 2: OBTER ELEMENTOS DO FORMULÁRIO =====
+    // ===== OBTER ELEMENTOS DO FORMULÁRIO =====
     const pinInput = document.getElementById('userPin');
     const userTypeSelect = document.getElementById('userType');
     
@@ -915,7 +912,6 @@ console.log('✅ Dados iniciais criados com sucesso!');
         return false;
     }
     
-    // ===== PARTE 3: VALIDAR PIN =====
     const pin = pinInput.value.trim();
     const userType = userTypeSelect.value;
     
@@ -926,97 +922,38 @@ console.log('✅ Dados iniciais criados com sucesso!');
         return false;
     }
     
-    // ===== PARTE 4: GARANTIR QUE OS DADOS EXISTEM (CORREÇÃO 5) =====
-    console.log('📊 Verificando dados dos trabalhadores...');
-    
-    // Verificar se workers existe e tem conteúdo
+    // ===== GARANTIR QUE OS DADOS EXISTEM =====
     if (!this.workers || this.workers.length === 0) {
-        console.log('⚠️ workers não encontrado ou vazio. Tentando recuperar...');
-        
-        // TENTATIVA 1: Carregar do localStorage
-        console.log('📂 Tentativa 1: Carregar do localStorage');
+        console.log('⚠️ Workers não carregados. Carregando...');
         this.loadData();
-        
-        // Verificar se após loadData os workers foram carregados
-        if (!this.workers || this.workers.length === 0) {
-            console.log('⚠️ Tentativa 1 falhou. workers ainda vazio.');
-            
-            // TENTATIVA 2: Verificar se há dados noutra localStorage key
-            console.log('📂 Tentativa 2: Verificar backup de emergência');
-            const backupData = localStorage.getItem('ponto_pre_import_backup');
-            if (backupData) {
-                try {
-                    const backup = JSON.parse(backupData);
-                    if (backup.workers && backup.workers.length > 0) {
-                        console.log(`✅ Backup encontrado com ${backup.workers.length} trabalhadores`);
-                        this.workers = backup.workers;
-                        this.saveAllData();
-                    }
-                } catch (backupError) {
-                    console.error('❌ Erro ao ler backup:', backupError);
-                }
-            }
-            
-            // TENTATIVA 3: Criar dados de exemplo
-            if (!this.workers || this.workers.length === 0) {
-                console.log('🆕 Tentativa 3: Criar dados de exemplo');
-                this.initializeSampleData();
-            }
-        }
-        
-        // Pequena pausa para garantir que os dados foram atribuídos
-        // (em JavaScript é síncrono, mas por segurança)
-        await new Promise(resolve => setTimeout(resolve, 50));
-        
-        // Verificação final
-        if (!this.workers || this.workers.length === 0) {
-            console.error('❌ TODAS AS TENTATIVAS FALHARAM. Não foi possível carregar dados.');
-            this.showNotification('Erro crítico: não foi possível carregar os dados!', 'error');
-            return false;
-        } else {
-            console.log(`✅ Dados recuperados com sucesso! ${this.workers.length} trabalhadores disponíveis.`);
-        }
-    } else {
-        console.log(`✅ workers já carregado com ${this.workers.length} trabalhadores`);
     }
-    
-    // ===== PARTE 5: PROCURAR O TRABALHADOR PELO PIN =====
-    console.log('🔍 A procurar trabalhador com PIN:', pin);
-    console.log('📋 PINs disponíveis:', this.workers.map(w => w.pin).join(', '));
     
     const worker = this.workers.find(w => w.pin === pin);
     
     if (!worker) {
-        console.log(`❌ PIN ${pin} não encontrado na lista de trabalhadores.`);
-        
-        // Debug: mostrar os primeiros 3 trabalhadores para referência
-        const sampleWorkers = this.workers.slice(0, 3).map(w => `${w.name}: ${w.pin}`);
-        console.log('📋 Exemplos de trabalhadores:', sampleWorkers);
-        
+        console.log(`❌ PIN ${pin} não encontrado.`);
         this.showNotification('PIN inválido!', 'error');
         return false;
     }
-    
-    // ===== PARTE 6: VALIDAR ESTADO DO TRABALHADOR =====
-    console.log(`✅ Trabalhador encontrado: ${worker.name} (Admin: ${worker.isAdmin})`);
     
     if (!worker.active) {
         this.showNotification('Este trabalhador está inativo!', 'error');
         return false;
     }
     
+    // ===== VALIDAÇÃO DO TIPO DE ACESSO =====
     if (userType === 'admin' && !worker.isAdmin) {
         this.showNotification('Este utilizador não tem permissões de administrador!', 'error');
         return false;
     }
     
-    // ===== PARTE 7: PROCESSAR LOGIN BEM-SUCEDIDO =====
+    // ===== LOGIN BEM-SUCEDIDO =====
     console.log(`✅ Login bem-sucedido: ${worker.name} (${userType})`);
     
     this.currentUser = worker;
     this.isAdmin = userType === 'admin';
     
-    // Limpar sessão anterior antes de definir nova
+    // Limpar sessão anterior
     sessionStorage.clear();
     
     sessionStorage.setItem('currentUser', JSON.stringify(worker));
@@ -1024,7 +961,7 @@ console.log('✅ Dados iniciais criados com sucesso!');
     
     this.showNotification(`Bem-vindo, ${worker.name}!`, 'success');
     
-    // ===== PARTE 8: REDIRECIONAR =====
+    // ===== REDIRECIONAR =====
     setTimeout(() => {
         if (this.isAdmin) {
             window.location.href = 'admin.html';
@@ -1036,33 +973,136 @@ console.log('✅ Dados iniciais criados com sucesso!');
     return true;
 }
 
+    toggleQRScanner() {
+        console.log('Toggle QR Scanner');
+        const qrReader = document.getElementById('qr-reader');
+        const scanQRBtn = document.getElementById('scanQR');
+        
+        if (!qrReader || !scanQRBtn) return;
+        
+        if (qrReader.style.display === 'none' || qrReader.style.display === '') {
+            qrReader.style.display = 'block';
+            scanQRBtn.textContent = '❌ Cancelar Scanner';
+            
+            qrReader.innerHTML = '';
+            
+            const scannerContainer = document.createElement('div');
+            scannerContainer.id = 'scanner-container';
+            scannerContainer.style.width = '100%';
+            scannerContainer.style.height = '300px';
+            scannerContainer.style.position = 'relative';
+            qrReader.appendChild(scannerContainer);
+            
+            if (typeof Html5QrcodeScanner !== 'undefined') {
+                try {
+                    const html5QrCode = new Html5QrcodeScanner(
+                        "scanner-container",
+                        {
+                            fps: 10,
+                            qrbox: { width: 250, height: 250 },
+                            showTorchButtonIfSupported: true,
+                            showZoomSliderIfSupported: true,
+                            facingMode: "environment"
+                        },
+                        false
+                    );
+                    
+                    html5QrCode.render(
+                        (decodedText) => {
+                            console.log('QR Code lido:', decodedText);
+                            
+                            let pin = null;
+                            
+                            if (decodedText.includes('CHECKPOINT:PIN:')) {
+                                const match = decodedText.match(/CHECKPOINT:PIN:(\d{4})/);
+                                if (match) pin = match[1];
+                            } else if (decodedText.includes('PIN:')) {
+                                const match = decodedText.match(/PIN:(\d{4})/);
+                                if (match) pin = match[1];
+                            } else if (/^\d{4}$/.test(decodedText)) {
+                                pin = decodedText;
+                            }
+                            
+                            if (pin) {
+                                document.getElementById('userPin').value = pin;
+                                html5QrCode.clear();
+                                qrReader.style.display = 'none';
+                                scanQRBtn.textContent = '📱 Ler QR Code';
+                                this.showNotification('PIN lido com sucesso!', 'success');
+                                
+                                setTimeout(() => {
+                                    this.handleLogin();
+                                }, 500);
+                            } else {
+                                this.showNotification('QR Code inválido! Deve conter um PIN de 4 dígitos', 'error');
+                            }
+                        },
+                        (errorMessage) => {
+                            if (!errorMessage.includes('NotFoundException')) {
+                                console.log('Scanner error:', errorMessage);
+                            }
+                        }
+                    );
+                    
+                    this.qrScanner = html5QrCode;
+                } catch (error) {
+                    console.error('Erro ao inicializar scanner:', error);
+                    scannerContainer.innerHTML = '<p style="color: var(--danger-color); text-align: center; padding: 20px;">Erro ao iniciar scanner de QR Code. Recarregue a página.</p>';
+                }
+            } else {
+                scannerContainer.innerHTML = '<p style="color: var(--danger-color); text-align: center; padding: 20px;">Biblioteca QR Code não carregada. Verifique sua conexão.</p>';
+            }
+        } else {
+            if (this.qrScanner) {
+                try {
+                    this.qrScanner.clear();
+                } catch (e) {
+                    console.log('Erro ao limpar scanner:', e);
+                }
+                this.qrScanner = null;
+            }
+            
+            qrReader.style.display = 'none';
+            scanQRBtn.textContent = '📱 Ler QR Code';
+            qrReader.innerHTML = '';
+        }
+    }
+
     checkAuth() {
-    console.log('🔒 Verificando autenticação...');
-    const currentPage = window.location.pathname.split('/').pop();
-    
-    // Se NÃO estiver na página de login, verificar autenticação
-    if (currentPage !== 'index.html' && currentPage !== '' && !currentPage.includes('index')) {
+        console.log('🔒 Verificando autenticação...');
+        const currentPage = window.location.pathname.split('/').pop();
+        
+        if (currentPage === 'index.html' || currentPage === '' || currentPage.includes('index')) {
+            const user = sessionStorage.getItem('currentUser');
+            if (user) {
+                console.log('🔄 Usuário já autenticado, redirecionando...');
+                this.currentUser = JSON.parse(user);
+                this.isAdmin = sessionStorage.getItem('isAdmin') === 'true';
+                
+                setTimeout(() => {
+                    window.location.href = this.isAdmin ? 'admin.html' : 'worker.html';
+                }, 500);
+            }
+            return;
+        }
+        
         const user = sessionStorage.getItem('currentUser');
         if (!user) {
             console.log('❌ Não autenticado, redirecionando para login');
             window.location.href = 'index.html';
-        } else {
-            this.currentUser = JSON.parse(user);
-            this.isAdmin = sessionStorage.getItem('isAdmin') === 'true';
+            return;
         }
-        return;
-    }
-    
-    // NA PÁGINA DE LOGIN: NÃO redirecionar automaticamente
-    // Apenas carregar dados se existirem, sem redirecionar
-    const user = sessionStorage.getItem('currentUser');
-    if (user) {
-        console.log('👤 Utilizador com sessão ativa na página de login - aguardando novo login');
+        
         this.currentUser = JSON.parse(user);
         this.isAdmin = sessionStorage.getItem('isAdmin') === 'true';
-        // NÃO redirecionar - permitir novo login
+        
+        if (currentPage === 'admin.html' && !this.isAdmin) {
+            console.log('⚠️ Acesso não autorizado a admin, redirecionando');
+            window.location.href = 'worker.html';
+        }
+        
+        console.log('✅ Autenticação verificada');
     }
-}
 
     logout() {
         console.log('🚪 Realizando logout...');
