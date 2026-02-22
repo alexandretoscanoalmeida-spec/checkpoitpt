@@ -324,225 +324,155 @@ async function listCameras() {
     }
 }
           
-            // Função para iniciar o leitor QR
-            async function startQRReader(cameraId) {
-                if (html5QrCode) {
-                    await html5QrCode.stop();
-                    html5QrCode.clear();
-                }
-                
-                html5QrCode = new Html5Qrcode("qr-reader");
-                
-                const config = {
-                    fps: 10,
-                    qrbox: { width: 250, height: 250 },
-                    aspectRatio: 1.0
-                };
-                
-                try {
-                    await html5QrCode.start(
-                        cameraId,
-                        config,
-                        (decodedText) => {
-                            // Callback de sucesso - QR Code lido
-                            console.log('QR Code lido:', decodedText);
-                            
-                            // Extrair PIN do QR Code
-                            let pin = null;
-                            
-                            if (decodedText.includes('CHECKPOINT:PIN:')) {
-                                const match = decodedText.match(/CHECKPOINT:PIN:(\d{4})/);
-                                if (match) pin = match[1];
-                            } else if (decodedText.includes('PIN:')) {
-                                const match = decodedText.match(/PIN:(\d{4})/);
-                                if (match) pin = match[1];
-                            } else if (/^\d{4}$/.test(decodedText)) {
-                                pin = decodedText;
-                            }
-                            
-                            if (pin) {
-    console.log('📱 PIN lido:', pin);
-    
-    // ===== 1. PREENCHER O CAMPO PIN =====
-    const pinInput = document.getElementById('userPin');
-    pinInput.value = pin;
-    
-    // ===== 2. FUNÇÃO PARA TENTAR O LOGIN COM RETRY AUTOMÁTICO =====
-    const tentarLogin = (tentativa = 1) => {
-        console.log(`🔄 Tentativa ${tentativa} de login...`);
-        
-        // Verificar se o PontoApp está disponível e tem workers carregados
-        if (window.PontoApp && window.PontoApp.workers) {
-            
-            // Verificar se os workers já foram carregados (não estão vazios)
-            if (window.PontoApp.workers.length > 0) {
-                console.log(`✅ PontoApp pronto com ${window.PontoApp.workers.length} trabalhadores`);
-                
-                // Procurar o trabalhador pelo PIN
-                const worker = window.PontoApp.workers.find(w => w.pin === pin);
-                
-                if (worker) {
-                    console.log(`✅ Trabalhador encontrado: ${worker.name} (Admin: ${worker.isAdmin})`);
-                    
-                    // Selecionar o tipo correto no dropdown
-                    const userTypeSelect = document.getElementById('userType');
-                    userTypeSelect.value = worker.isAdmin ? 'admin' : 'worker';
-                    
-                    // Mostrar notificação personalizada
-                    if (window.PontoApp.showNotification) {
-                        window.PontoApp.showNotification(`Bem-vindo, ${worker.name}!`, 'success');
-                    } else {
-                        // Fallback se showNotification não existir
-                        console.log(`Bem-vindo, ${worker.name}!`);
-                    }
-                    
-                    // ===== DISPARAR EVENTO DE SUBMIT =====
-                    setTimeout(() => {
-                        const form = document.getElementById('loginForm');
-                        
-                        if (form) {
-                            console.log('📤 Disparando evento de submit...');
-                            const submitEvent = new Event('submit', { 
-                                bubbles: true,      // Propaga pelo DOM
-                                cancelable: true     // Pode ser cancelado
-                            });
-                            
-                            // Disparar o evento no formulário
-                            form.dispatchEvent(submitEvent);
-                            
-                            // ===== PARAR O LEITOR APÓS O LOGIN =====
-                            setTimeout(() => {
-                                if (html5QrCode) {
-                                    console.log('🛑 Parando leitor QR após login');
-                                    stopQRReader();
-                                }
-                            }, 1000); // Aguarda 1 segundo para o login processar
-                            
-                        } else {
-                            console.error('❌ Formulário de login não encontrado');
-                            stopQRReader();
-                        }
-                        
-                    }, 200); // Pequeno delay para garantir que tudo está atualizado
-                    
-                    return true; // Login processado com sucesso
-                    
-                } else {
-                    // PIN não encontrado na base de dados
-                    console.error(`❌ PIN ${pin} não encontrado na base de dados`);
-                    
-                    if (window.PontoApp.showNotification) {
-                        window.PontoApp.showNotification('PIN não registado!', 'error');
-                    } else {
-                        alert('PIN não registado!');
-                    }
-                    
-                    // Parar leitor em caso de erro
-                    stopQRReader();
-                    return false;
-                }
-                
-            } else {
-                // Workers ainda vazios (PontoApp carregado mas sem dados)
-                console.log(`⚠️ PontoApp.workers está vazio (tentativa ${tentativa}/5)`);
-                
-                if (tentativa < 5) {
-                    // Tentar novamente após 300ms
-                    console.log(`⏳ Aguardando 300ms para tentativa ${tentativa + 1}...`);
-                    setTimeout(() => tentarLogin(tentativa + 1), 300);
-                } else {
-                    // Desistir após 5 tentativas - workers continuam vazios
-                    console.error('❌ PontoApp.workers vazio após 5 tentativas');
-                    
-                    // Tentar forçar o carregamento dos dados
-                    if (window.PontoApp && typeof window.PontoApp.loadData === 'function') {
-                        console.log('🔄 Forçando recarregamento de dados...');
-                        window.PontoApp.loadData();
-                        
-                        // Última tentativa após recarregar
-                        setTimeout(() => {
-                            const worker = window.PontoApp.workers?.find(w => w.pin === pin);
-                            if (worker) {
-                                console.log(`✅ Trabalhador encontrado após recarregar: ${worker.name}`);
-                                tentarLogin(1); // Recomeçar o processo
-                            } else {
-                                console.error('❌ PIN ainda não encontrado após recarregar');
-                                if (window.PontoApp.showNotification) {
-                                    window.PontoApp.showNotification('Erro ao carregar dados. Tente novamente.', 'error');
-                                }
-                                stopQRReader();
-                            }
-                        }, 500);
-                    } else {
-                        if (window.PontoApp && window.PontoApp.showNotification) {
-                            window.PontoApp.showNotification('Erro ao carregar dados. Tente novamente.', 'error');
-                        } else {
-                            alert('Erro ao carregar dados. Tente novamente.');
-                        }
-                        stopQRReader();
-                    }
-                }
-            }
-            
-        } else {
-            // PontoApp não está disponível
-            console.log(`⚠️ window.PontoApp não disponível (tentativa ${tentativa}/5)`);
-            
-            if (tentativa < 5) {
-                // Tentar novamente após 300ms
-                console.log(`⏳ Aguardando 300ms para tentativa ${tentativa + 1}...`);
-                setTimeout(() => tentarLogin(tentativa + 1), 300);
-            } else {
-                // Desistir após 5 tentativas
-                console.error('❌ window.PontoApp não disponível após 5 tentativas');
-                
-                // Fallback: tentar submeter o formulário mesmo assim
-                console.warn('⚠️ Usando fallback - submit direto');
-                
-                setTimeout(() => {
-                    const form = document.getElementById('loginForm');
-                    if (form) {
-                        form.dispatchEvent(new Event('submit', { 
-                            bubbles: true, 
-                            cancelable: true 
-                        }));
-                    }
-                    
-                    // Parar leitor após tentativa
-                    setTimeout(() => {
-                        stopQRReader();
-                    }, 1000);
-                }, 200);
-            }
+            // Função para iniciar o leitor QR - VERSÃO CORRIGIDA
+async function startQRReader(cameraConfig) {
+    if (html5QrCode) {
+        try {
+            await html5QrCode.stop();
+            await html5QrCode.clear();
+        } catch (e) {
+            console.log('Erro ao parar leitor anterior:', e);
         }
+    }
+    
+    html5QrCode = new Html5Qrcode("qr-reader");
+    
+    const config = {
+        fps: 10,
+        qrbox: { width: 250, height: 250 },
+        aspectRatio: 1.0
     };
     
-    // ===== 3. INICIAR O PROCESSO DE TENTATIVAS =====
-    console.log('🚀 Iniciando processo de login com retry automático...');
-    tentarLogin(1);
-}
-							else {
-                                if (window.PontoApp) {
-                                    window.PontoApp.showNotification('QR Code inválido!', 'error');
+    try {
+        // Verificar se é um objeto com facingMode ou um ID de câmara
+        let cameraIdOrConfig;
+        
+        if (typeof cameraConfig === 'string') {
+            // É um ID de câmara
+            cameraIdOrConfig = cameraConfig;
+            console.log('📷 Usando câmara por ID:', cameraConfig);
+        } else {
+            // É uma configuração com facingMode
+            cameraIdOrConfig = cameraConfig;
+            console.log('📷 Usando facingMode:', cameraConfig.facingMode);
+        }
+        
+        await html5QrCode.start(
+            cameraIdOrConfig,
+            config,
+            (decodedText) => {
+                // Callback de sucesso - QR Code lido
+                console.log('QR Code lido:', decodedText);
+                
+                // Extrair PIN do QR Code
+                let pin = null;
+                
+                if (decodedText.includes('CHECKPOINT:PIN:')) {
+                    const match = decodedText.match(/CHECKPOINT:PIN:(\d{4})/);
+                    if (match) pin = match[1];
+                } else if (decodedText.includes('PIN:')) {
+                    const match = decodedText.match(/PIN:(\d{4})/);
+                    if (match) pin = match[1];
+                } else if (/^\d{4}$/.test(decodedText)) {
+                    pin = decodedText;
+                }
+                
+                if (pin) {
+                    console.log('📱 PIN lido:', pin);
+                    
+                    // PREENCHER O CAMPO PIN
+                    const pinInput = document.getElementById('userPin');
+                    pinInput.value = pin;
+                    
+                    // FUNÇÃO PARA TENTAR O LOGIN
+                    const tentarLogin = (tentativa = 1) => {
+                        console.log(`🔄 Tentativa ${tentativa} de login...`);
+                        
+                        if (window.PontoApp && window.PontoApp.workers) {
+                            if (window.PontoApp.workers.length > 0) {
+                                console.log(`✅ PontoApp pronto com ${window.PontoApp.workers.length} trabalhadores`);
+                                
+                                const worker = window.PontoApp.workers.find(w => w.pin === pin);
+                                
+                                if (worker) {
+                                    console.log(`✅ Trabalhador encontrado: ${worker.name}`);
+                                    
+                                    const userTypeSelect = document.getElementById('userType');
+                                    userTypeSelect.value = worker.isAdmin ? 'admin' : 'worker';
+                                    
+                                    setTimeout(() => {
+                                        const form = document.getElementById('loginForm');
+                                        if (form) {
+                                            console.log('📤 Disparando evento de submit...');
+                                            const submitEvent = new Event('submit', { 
+                                                bubbles: true, 
+                                                cancelable: true 
+                                            });
+                                            form.dispatchEvent(submitEvent);
+                                            
+                                            setTimeout(() => {
+                                                if (html5QrCode) {
+                                                    console.log('🛑 Parando leitor QR após login');
+                                                    stopQRReader();
+                                                }
+                                            }, 1000);
+                                        }
+                                    }, 200);
+                                    
+                                    return true;
                                 } else {
-                                    alert('QR Code inválido!');
+                                    console.error(`❌ PIN ${pin} não encontrado`);
+                                    if (window.PontoApp && window.PontoApp.showNotification) {
+                                        window.PontoApp.showNotification('PIN não registado!', 'error');
+                                    } else {
+                                        alert('PIN não registado!');
+                                    }
+                                    stopQRReader();
+                                    return false;
+                                }
+                            } else {
+                                if (tentativa < 5) {
+                                    setTimeout(() => tentarLogin(tentativa + 1), 300);
+                                } else {
+                                    console.error('❌ PontoApp.workers vazio após 5 tentativas');
+                                    stopQRReader();
                                 }
                             }
-                        },
-                        (errorMessage) => {
-                            // Ignorar erros de leitura (normais durante o scanning)
-                            console.log('Erro de leitura (ignorado):', errorMessage);
+                        } else {
+                            if (tentativa < 5) {
+                                setTimeout(() => tentarLogin(tentativa + 1), 300);
+                            } else {
+                                console.error('❌ window.PontoApp não disponível');
+                                stopQRReader();
+                            }
                         }
-                    );
+                    };
                     
-                    console.log('Leitor QR iniciado com sucesso');
-                } catch (err) {
-                    console.error('Erro ao iniciar leitor QR:', err);
+                    tentarLogin(1);
+                } else {
                     if (window.PontoApp) {
-                        window.PontoApp.showNotification('Erro ao aceder à câmara. Verifique as permissões.', 'error');
+                        window.PontoApp.showNotification('QR Code inválido!', 'error');
+                    } else {
+                        alert('QR Code inválido!');
                     }
                 }
+            },
+            (errorMessage) => {
+                // Ignorar erros de leitura
+                if (!errorMessage.includes('NotFoundException')) {
+                    console.log('Erro de leitura:', errorMessage);
+                }
             }
+        );
+        
+        console.log('✅ Leitor QR iniciado com sucesso');
+    } catch (err) {
+        console.error('❌ Erro ao iniciar leitor QR:', err);
+        if (window.PontoApp && window.PontoApp.showNotification) {
+            window.PontoApp.showNotification('Erro ao aceder à câmara. Verifique as permissões.', 'error');
+        }
+    }
+}
             
             // Função para parar o leitor QR
             async function stopQRReader() {
