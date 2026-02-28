@@ -4466,18 +4466,68 @@ class AdminInterface {
     }
 
     clearAllData() {
-        console.log('Limpando todos os dados...');
+    console.log('Limpando apenas registos de ponto e administrativos...');
+    
+    if (confirm('⚠️ ATENÇÃO: Esta ação irá apagar TODOS os registos de ponto, registos administrativos, relatórios e banco de horas!\n\nOs trabalhadores, funções e horários serão mantidos.\n\nTem certeza?')) {
         
-        if (confirm('⚠️ ATENÇÃO: Esta ação irá limpar TODOS os dados do sistema!\n\nEsta ação não pode ser desfeita. Tem certeza?')) {
-            localStorage.clear();
-            sessionStorage.clear();
-            window.PontoApp.showNotification('Todos os dados foram limpos!', 'success');
-            setTimeout(() => {
-                window.location.href = 'index.html';
-            }, 1000);
+        // 1. VERIFICAR SE PontoApp EXISTE
+        if (!window.PontoApp) {
+            window.PontoApp.showNotification('Erro: Aplicação não inicializada!', 'error');
+            return;
         }
+        
+        // 2. GUARDAR REFERÊNCIAS AOS DADOS QUE QUEREMOS PRESERVAR
+        const workersPreservados = window.PontoApp.workers;
+        const rolesPreservados = window.PontoApp.roles;
+        const schedulesPreservados = window.PontoApp.schedules;
+        const scheduleTemplatesPreservados = window.PontoApp.scheduleTemplates;
+        const scheduleAssignmentsPreservados = window.PontoApp.scheduleAssignments;
+        const weekScheduleAssignmentsPreservados = window.PontoApp.weekScheduleAssignments;
+        
+        // 3. LIMPAR APENAS OS DADOS DE REGISTOS
+        window.PontoApp.registries = [];
+        window.PontoApp.reports = [];
+        window.PontoApp.adminRegistries = [];
+        window.PontoApp.hoursBank = {};
+        window.PontoApp.processedDays = {};
+        
+        // 4. RESTAURAR OS DADOS PRESERVADOS (garantia dupla)
+        window.PontoApp.workers = workersPreservados;
+        window.PontoApp.roles = rolesPreservados;
+        window.PontoApp.schedules = schedulesPreservados;
+        window.PontoApp.scheduleTemplates = scheduleTemplatesPreservados;
+        window.PontoApp.scheduleAssignments = scheduleAssignmentsPreservados;
+        window.PontoApp.weekScheduleAssignments = weekScheduleAssignmentsPreservados;
+        
+        // 5. ATUALIZAR O LOCALSTORAGE COM OS DADOS LIMPOS
+        window.PontoApp.saveAllData();
+        
+        // 6. LIMPAR APENAS AS CHAVES ESPECÍFICAS DO LOCALSTORAGE QUE QUEREMOS APAGAR
+        localStorage.removeItem('ponto_registries');
+        localStorage.removeItem('ponto_reports');
+        localStorage.removeItem('ponto_admin_registries');
+        localStorage.removeItem('ponto_hours_bank');
+        localStorage.removeItem('ponto_processed_days');
+        
+        // 7. NÃO LIMPAR SESSIONSTORAGE (mantém login do admin)
+        // sessionStorage NÃO é limpo!
+        
+        // 8. ATUALIZAR TODOS OS COMPONENTES DA INTERFACE QUE MOSTRAM REGISTOS
+        this.loadWorkersList();        // Mantém, mas necessário para refresh
+        this.loadStats();              // Importante - mostra estatísticas atualizadas
+        this.loadLastRegistries();     // Crucial - mostra registos vazios
+        this.loadBackupStats();        // Atualiza contadores
+        this.loadReportsList();        // Crucial - mostra relatórios vazios
+        this.loadAdminRegistries();    // Crucial - mostra registos admin vazios
+        this.loadSchedulesList();      // Mantém horários visíveis
+        
+        // 9. GARANTIR QUE O ADMIN PERMANECE NA PÁGINA
+        window.PontoApp.showNotification('✅ Todos os registos foram apagados com sucesso! Trabalhadores e horários mantidos.', 'success');
+        
+        console.log('✅ Limpeza concluída. Registos apagados, estrutura preservada.');
     }
-
+    }
+	
     loadQRCodeLibrary() {
         if (typeof QRCode === 'undefined') {
             const script = document.createElement('script');

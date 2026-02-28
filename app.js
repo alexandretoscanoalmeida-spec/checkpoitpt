@@ -313,48 +313,86 @@ generateMissingReports() {
 }
 
     loadData() {
-        console.log('📂 Carregando dados do localStorage...');
-        
-        try {
-            const workersData = localStorage.getItem('ponto_workers');
-            const schedulesData = localStorage.getItem('ponto_schedules');
-            const registriesData = localStorage.getItem('ponto_registries');
-            const reportsData = localStorage.getItem('ponto_reports');
-            const hoursBankData = localStorage.getItem('ponto_hours_bank');
-            const rolesData = localStorage.getItem('ponto_roles');
-            const adminRegistriesData = localStorage.getItem('ponto_admin_registries');
-            const scheduleTemplatesData = localStorage.getItem('ponto_schedule_templates');
-            const scheduleAssignmentsData = localStorage.getItem('ponto_schedule_assignments');
-            const weekScheduleAssignmentsData = localStorage.getItem('ponto_week_schedule_assignments');
+    console.log('📂 Carregando dados do localStorage...');
+    
+    try {
+        // VERIFICAÇÃO EXTRA: Se o localStorage está vazio, garantir arrays vazios
+        const workersData = localStorage.getItem('ponto_workers');
+        const schedulesData = localStorage.getItem('ponto_schedules');
+        const registriesData = localStorage.getItem('ponto_registries');
+        const reportsData = localStorage.getItem('ponto_reports');
+        const hoursBankData = localStorage.getItem('ponto_hours_bank');
+        const rolesData = localStorage.getItem('ponto_roles');
+        const adminRegistriesData = localStorage.getItem('ponto_admin_registries');
+        const scheduleTemplatesData = localStorage.getItem('ponto_schedule_templates');
+        const scheduleAssignmentsData = localStorage.getItem('ponto_schedule_assignments');
+        const weekScheduleAssignmentsData = localStorage.getItem('ponto_week_schedule_assignments');
 
-            if (!workersData) {
-                console.log('🆕 Nenhum dado encontrado. Criando dados iniciais...');
-                this.initializeSampleData();
-            } else {
-                console.log('✅ Dados existentes encontrados');
-                
-                this.workers = workersData ? JSON.parse(workersData) : [];
-                this.schedules = schedulesData ? JSON.parse(schedulesData) : {};
-                this.registries = registriesData ? JSON.parse(registriesData) : [];
-                this.reports = reportsData ? JSON.parse(reportsData) : [];
-                this.hoursBank = hoursBankData ? JSON.parse(hoursBankData) : {};
-                this.roles = rolesData ? JSON.parse(rolesData) : [];
-                this.adminRegistries = adminRegistriesData ? JSON.parse(adminRegistriesData) : [];
-                this.scheduleTemplates = scheduleTemplatesData ? JSON.parse(scheduleTemplatesData) : [];
-                this.scheduleAssignments = scheduleAssignmentsData ? JSON.parse(scheduleAssignmentsData) : {};
-                this.weekScheduleAssignments = weekScheduleAssignmentsData ? JSON.parse(weekScheduleAssignmentsData) : {};
-            }
+        // SE NÃO HOUVER DADOS, GARANTIR ARRAYS VAZIOS (NÃO CRIAR DADOS DE EXEMPLO AUTOMATICAMENTE)
+        if (!workersData) {
+            console.log('🆕 Nenhum dado encontrado. Inicializando arrays vazios...');
+            this.workers = [];
+            this.schedules = {};
+            this.registries = [];
+            this.reports = [];
+            this.hoursBank = {};
+            this.roles = [
+                { id: 1, name: 'Auxiliar de Educação', baseHours: 40 },
+                { id: 2, name: 'Educadora de Infância', baseHours: 40 },
+                { id: 3, name: 'Administrativa', baseHours: 40 },
+                { id: 4, name: 'Limpeza', baseHours: 40 },
+                { id: 5, name: 'Direção', baseHours: 40 }
+            ];
+            this.adminRegistries = [];
+            this.scheduleTemplates = [];
+            this.scheduleAssignments = {};
+            this.weekScheduleAssignments = {};
+            this.processedDays = {};
             
-            console.log(`✅ Carregados: ${this.workers.length} trabalhadores, ${this.registries.length} registros`);
-            console.log(`💰 Banco de Horas: ${Object.keys(this.hoursBank).length} trabalhadores com saldo`);
-            console.log(`📋 Registos Admin: ${this.adminRegistries.length} registos`);
+            // NÃO chamar initializeSampleData() automaticamente
+            // this.initializeSampleData(); ← COMENTADO!
             
-        } catch (error) {
-            console.error('❌ Erro ao carregar dados:', error);
-            console.log('🔄 Criando novos dados devido ao erro...');
-            this.initializeSampleData();
+            this.saveAllData();
+            return;
         }
+        
+        // SE HOUVER DADOS, CARREGAR NORMALMENTE
+        console.log('✅ Dados existentes encontrados');
+        
+        this.workers = workersData ? JSON.parse(workersData) : [];
+        this.schedules = schedulesData ? JSON.parse(schedulesData) : {};
+        this.registries = registriesData ? JSON.parse(registriesData) : [];
+        this.reports = reportsData ? JSON.parse(reportsData) : [];
+        this.hoursBank = hoursBankData ? JSON.parse(hoursBankData) : {};
+        this.roles = rolesData ? JSON.parse(rolesData) : this.roles || [];
+        this.adminRegistries = adminRegistriesData ? JSON.parse(adminRegistriesData) : [];
+        this.scheduleTemplates = scheduleTemplatesData ? JSON.parse(scheduleTemplatesData) : [];
+        this.scheduleAssignments = scheduleAssignmentsData ? JSON.parse(scheduleAssignmentsData) : {};
+        this.weekScheduleAssignments = weekScheduleAssignmentsData ? JSON.parse(weekScheduleAssignmentsData) : {};
+        this.processedDays = JSON.parse(localStorage.getItem('ponto_processed_days') || '{}');
+        
+        console.log(`✅ Carregados: ${this.workers.length} trabalhadores, ${this.registries.length} registros`);
+        console.log(`💰 Banco de Horas: ${Object.keys(this.hoursBank).length} trabalhadores com saldo`);
+        console.log(`📋 Registos Admin: ${this.adminRegistries.length} registos`);
+        
+    } catch (error) {
+        console.error('❌ Erro ao carregar dados:', error);
+        console.log('🔄 Inicializando arrays vazios devido ao erro...');
+        
+        // GARANTIR ARRAYS VAZIOS EM CASO DE ERRO
+        this.workers = [];
+        this.schedules = {};
+        this.registries = [];
+        this.reports = [];
+        this.hoursBank = {};
+        this.roles = [];
+        this.adminRegistries = [];
+        this.scheduleTemplates = [];
+        this.scheduleAssignments = {};
+        this.weekScheduleAssignments = {};
+        this.processedDays = {};
     }
+}
 
     // Validar consistência do banco de horas
     validateHoursBankConsistency() {
@@ -393,15 +431,14 @@ generateMissingReports() {
     }
 
     initializeSampleData() {
-        console.log('🎯 Inicializando dados de exemplo...');
-        
-        this.roles = [
-            { id: 1, name: 'Auxiliar de Educação', baseHours: 40 },
-            { id: 2, name: 'Educadora de Infância', baseHours: 40 },
-            { id: 3, name: 'Administrativa', baseHours: 40 },
-            { id: 4, name: 'Limpeza', baseHours: 40 },
-            { id: 5, name: 'Direção', baseHours: 40 }
-        ];
+    console.log('🎯 Inicializando dados de exemplo...');
+    
+    // VERIFICAR SE JÁ EXISTEM DADOS ANTES DE INICIALIZAR
+    if (this.workers && this.workers.length > 0) {
+        console.log('⚠️ Dados já existem. A inicializar apenas se forced=true');
+        // Se quiser forçar mesmo assim, comente esta verificação
+        return;
+    }
 
         this.workers = [
             {
@@ -768,6 +805,38 @@ console.log('✅ Dados iniciais criados com sucesso!');
             console.error('❌ Erro ao salvar dados:', error);
         }
     }
+	
+	// NOVO MÉTODO: Reinicializar completamente a aplicação
+resetAllData() {
+    console.log('🔄 Reinicializando completamente a aplicação...');
+    
+    // 1. LIMPAR TODOS OS ARRAYS E OBJETOS
+    this.workers = [];
+    this.schedules = {};
+    this.registries = [];
+    this.reports = [];
+    this.hoursBank = {};
+    this.roles = [];
+    this.adminRegistries = [];
+    this.scheduleTemplates = [];
+    this.scheduleAssignments = {};
+    this.weekScheduleAssignments = {};
+    this.processedDays = {};
+    
+    // 2. LIMPAR LOCALSTORAGE
+    localStorage.clear();
+    sessionStorage.clear();
+    
+    // 3. RECRIAR DADOS INICIAIS (se desejar)
+    // Comente a linha abaixo se quiser um sistema completamente vazio
+    this.initializeSampleData();
+    
+    // 4. GARANTIR QUE TUDO FOI SALVO
+    this.saveAllData();
+    
+    console.log('✅ Aplicação reinicializada com sucesso!');
+    return true;
+}
 
     updateHoursBank(workerId, hours, action = 'add', description = '') {
         if (!this.hoursBank[workerId]) {
