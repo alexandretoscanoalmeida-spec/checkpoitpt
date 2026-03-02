@@ -1235,12 +1235,28 @@ resetAllData() {
         return notification;
     }
 
-    generateQRCode(workerId) {
-        const worker = this.workers.find(w => w.id === workerId);
-        if (!worker) return null;
-        
-        return `CHECKPOINT:PIN:${worker.pin}|NAME:${worker.name}|ROLE:${worker.role}`;
+    // app.js - Substitua a função generateQRCode por esta versão
+generateQRCode(workerId) {
+    // Garantir que workers está carregado
+    if (!this.workers || this.workers.length === 0) {
+        this.loadData();
     }
+    
+    // Tentar encontrar o worker por ID (como número ou string)
+    const worker = this.workers.find(w => w.id == workerId); // USAR == para comparar número com string
+    
+    if (!worker) {
+        console.error(`❌ Trabalhador ID ${workerId} não encontrado`);
+        return `CHECKPOINT:PIN:${workerId.toString().padStart(4, '0')}|NAME:Desconhecido|ROLE:Sem Função`;
+    }
+    
+    // Garantir que o PIN existe e tem 4 dígitos
+    const pin = worker.pin ? worker.pin.toString().padStart(4, '0') : workerId.toString().padStart(4, '0');
+    const name = worker.name || 'Trabalhador';
+    const role = worker.role || 'Sem Função';
+    
+    return `CHECKPOINT:PIN:${pin}|NAME:${name}|ROLE:${role}`;
+}
 
 // app.js - Método generateQRCodeElement CORRIGIDO
 generateQRCodeElement(workerId, elementId, size = 200) {

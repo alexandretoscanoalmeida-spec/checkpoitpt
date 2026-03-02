@@ -4201,40 +4201,151 @@ class AdminInterface {
             }
         }
     }
+	
+	// admin.js - Adicionar função de diagnóstico
+diagnoseWorkerData(workerId) {
+    console.log(`🔍 Diagnosticando worker ID: ${workerId}`);
+    
+    const worker = window.PontoApp.workers.find(w => w.id == workerId);
+    if (!worker) {
+        console.error('❌ Worker não encontrado!');
+        return false;
+    }
+    
+    console.log('📊 Dados do worker:', {
+        id: worker.id,
+        name: worker.name,
+        pin: worker.pin,
+        role: worker.role,
+        active: worker.active,
+        isAdmin: worker.isAdmin,
+        hourlyRate: worker.hourlyRate,
+        roleId: worker.roleId
+    });
+    
+    // Verificar se há dados corrompidos no banco de horas
+    if (window.PontoApp.hoursBank && window.PontoApp.hoursBank[workerId]) {
+        console.log('💰 Banco de horas:', window.PontoApp.hoursBank[workerId]);
+    }
+    
+    // Verificar se há registos administrativos corrompidos
+    const adminRegs = (window.PontoApp.adminRegistries || []).filter(r => r.workerId == workerId);
+    if (adminRegs.length > 0) {
+        console.log('📋 Registos admin:', adminRegs);
+    }
+    
+    return worker;
+}
 
-// admin.js - Função showWorkerQR CORRIGIDA DEFINITIVAMENTE
+// admin.js - Adicionar função de reparação
+repairWorkerData(workerId) {
+    console.log(`🔧 Reparando dados do worker ${workerId}`);
+    
+    if (!window.PontoApp) return false;
+    
+    // Recarregar workers do localStorage para garantir
+    const workersData = localStorage.getItem('ponto_workers');
+    if (workersData) {
+        const workers = JSON.parse(workersData);
+        const workerIndex = workers.findIndex(w => w.id == workerId);
+        
+        if (workerIndex !== -1) {
+            // Guardar valores originais para referência
+            const originalWorker = {...workers[workerIndex]};
+            
+            // Garantir que o worker tem todas as propriedades necessárias
+            // PIN: garantir que tem 4 dígitos
+            workers[workerIndex].pin = workers[workerIndex].pin ? 
+                workers[workerIndex].pin.toString().padStart(4, '0').substring(0, 4) : 
+                workerId.toString().padStart(4, '0').substring(0, 4);
+            
+            // Nome: garantir que não está vazio
+            workers[workerIndex].name = workers[workerIndex].name || 'Trabalhador';
+            
+            // Função: garantir que não está vazia
+            workers[workerIndex].role = workers[workerIndex].role || 'Sem Função';
+            
+            // Ativo: garantir que é booleano
+            workers[workerIndex].active = workers[workerIndex].active !== false;
+            
+            // isAdmin: garantir que é booleano
+            workers[workerIndex].isAdmin = workers[workerIndex].isAdmin === true;
+            
+            // hourlyRate: garantir que é número
+            workers[workerIndex].hourlyRate = parseFloat(workers[workerIndex].hourlyRate) || 10;
+            
+            // roleId: garantir que é número
+            workers[workerIndex].roleId = parseInt(workers[workerIndex].roleId) || 1;
+            
+            console.log('📝 Worker reparado:', {
+                antes: originalWorker,
+                depois: workers[workerIndex]
+            });
+            
+            // Salvar de volta no localStorage
+            localStorage.setItem('ponto_workers', JSON.stringify(workers));
+            
+            // Atualizar o PontoApp
+            window.PontoApp.workers = workers;
+            window.PontoApp.saveAllData();
+            
+            console.log('✅ Worker reparado com sucesso!');
+            return true;
+        } else {
+            console.error('❌ Worker não encontrado no localStorage');
+        }
+    } else {
+        console.error('❌ Dados de workers não encontrados no localStorage');
+    }
+    return false;
+}
+
+// admin.js - Substitua showWorkerQR por esta versão ULTRA-ROBUSTA
 showWorkerQR(worker) {
     console.log('Mostrando QR Code para:', worker.name);
+    
+    // FAZER DIAGNÓSTICO ANTES
+    const diagnosedWorker = this.diagnoseWorkerData(worker.id);
+    
+    // USAR DADOS DIRETAMENTE DO WORKER, NÃO DEPENDER DO PontoApp
+    const workerData = {
+        id: worker.id,
+        name: worker.name || 'Trabalhador',
+        pin: worker.pin ? worker.pin.toString().padStart(4, '0') : worker.id.toString().padStart(4, '0'),
+        role: worker.role || 'Sem Função'
+    };
+    
+    console.log('📱 Dados para QR Code:', workerData);
     
     const modal = document.createElement('div');
     modal.className = 'modal active';
     modal.innerHTML = `
         <div class="modal-content" style="max-width: 400px;">
             <div class="modal-header">
-                <h3>QR Code - ${worker.name}</h3>
+                <h3>QR Code - ${workerData.name}</h3>
                 <button class="btn btn-small btn-close close-modal">×</button>
             </div>
             <div class="modal-body" style="text-align: center;">
                 <!-- Container do QR Code - COM ID ÚNICO -->
-                <div id="workerQRCode_${worker.id}" style="width: 250px; height: 250px; margin: 20px auto;"></div>
+                <div id="workerQRCode_${workerData.id}" style="width: 250px; height: 250px; margin: 20px auto;"></div>
                 
                 <!-- Informações do trabalhador -->
                 <div style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
-                    <p><strong>Nome:</strong> ${worker.name}</p>
-                    <p><strong>Função:</strong> ${worker.role}</p>
-                    <p><strong>PIN:</strong> ${worker.pin}</p>
+                    <p><strong>Nome:</strong> ${workerData.name}</p>
+                    <p><strong>Função:</strong> ${workerData.role}</p>
+                    <p><strong>PIN:</strong> ${workerData.pin}</p>
                     <p><small style="color: #666;">Use o PIN ou escaneie o QR Code para login</small></p>
                 </div>
                 
                 <!-- Mensagem de erro (inicialmente oculta) -->
-                <div id="qrError_${worker.id}" style="display: none; margin-top: 15px; padding: 10px; background: #f8d7da; color: #721c24; border-radius: 5px;">
+                <div id="qrError_${workerData.id}" style="display: none; margin-top: 15px; padding: 10px; background: #f8d7da; color: #721c24; border-radius: 5px;">
                     ⚠️ Erro ao gerar QR Code. Use o PIN para fazer login.
                 </div>
             </div>
             <div class="modal-footer">
                 <button class="btn btn-secondary close-modal">Fechar</button>
-                <button class="btn btn-primary" id="btnPrintQR_${worker.id}">🖨️ Imprimir</button>
-                <button class="btn btn-success" id="btnRegenerateQR_${worker.id}">🔄 Gerar Novo QR Code</button>
+                <button class="btn btn-primary" id="btnPrintQR_${workerData.id}">🖨️ Imprimir</button>
+                <button class="btn btn-success" id="btnRegenerateQR_${workerData.id}">🔄 Gerar Novo QR Code</button>
             </div>
         </div>
     `;
@@ -4243,13 +4354,12 @@ showWorkerQR(worker) {
     
     // VARIÁVEL PARA CONTROLAR INSTÂNCIA DO QR CODE
     let qrCodeInstance = null;
-    const qrContainerId = `workerQRCode_${worker.id}`;
+    const qrContainerId = `workerQRCode_${workerData.id}`;
     
     // FUNÇÃO PARA LIMPAR O QR CODE ANTERIOR
     const destroyQRCode = () => {
         const container = document.getElementById(qrContainerId);
         if (container) {
-            // Remover todos os filhos (canvas, img, divs)
             while (container.firstChild) {
                 container.removeChild(container.firstChild);
             }
@@ -4257,22 +4367,20 @@ showWorkerQR(worker) {
         qrCodeInstance = null;
     };
     
-    // FUNÇÃO PARA GERAR O QR CODE
+    // FUNÇÃO PARA GERAR O QR CODE - VERSÃO QUE NÃO DEPENDE DO PontoApp
     const generateQRCode = () => {
-        destroyQRCode(); // LIMPAR COMPLETAMENTE
+        destroyQRCode();
         
         const container = document.getElementById(qrContainerId);
-        const errorContainer = document.getElementById(`qrError_${worker.id}`);
+        const errorContainer = document.getElementById(`qrError_${workerData.id}`);
         
         if (!container) return false;
         
         try {
-            // Verificar se PontoApp existe
-            if (!window.PontoApp) {
-                throw new Error('PontoApp não inicializado');
-            }
+            // CRIAR QR DATA MANUALMENTE, SEM USAR PontoApp.generateQRCode
+            const qrData = `CHECKPOINT:PIN:${workerData.pin}|NAME:${workerData.name}|ROLE:${workerData.role}`;
             
-            const qrData = window.PontoApp.generateQRCode(worker.id);
+            console.log('📊 QR Data a ser gerado:', qrData);
             
             // Verificar se a biblioteca QRCode está disponível
             if (typeof QRCode !== 'undefined') {
@@ -4287,8 +4395,17 @@ showWorkerQR(worker) {
                         correctLevel: QRCode.CorrectLevel.H
                     });
                     
-                    console.log(`✅ QR Code gerado para ${worker.name}`);
+                    console.log(`✅ QR Code gerado para ${workerData.name}`);
                     if (errorContainer) errorContainer.style.display = 'none';
+                    
+                    // VERIFICAÇÃO EXTRA - Se o container ficou vazio, algo errado
+                    setTimeout(() => {
+                        if (container.children.length === 0) {
+                            console.warn('⚠️ Container vazio após geração, usando fallback');
+                            throw new Error('Falha na geração');
+                        }
+                    }, 100);
+                    
                     return true;
                     
                 } catch (qrError) {
@@ -4305,14 +4422,14 @@ showWorkerQR(worker) {
             // Mostrar mensagem de erro
             if (errorContainer) errorContainer.style.display = 'block';
             
-            // FALLBACK VISUAL
+            // FALLBACK VISUAL COM O PIN EM DESTAQUE
             container.innerHTML = `
                 <div style="width: 250px; height: 250px; background: #f0f0f0; display: flex; align-items: center; justify-content: center; border-radius: 10px; margin: 0 auto; border: 2px dashed #e74c3c;">
                     <div style="text-align: center;">
                         <span style="font-size: 48px;">⚠️</span>
                         <p style="color: #666; margin-top: 10px;">
                             Use o PIN para login<br>
-                            <strong style="font-size: 24px;">${worker.pin}</strong>
+                            <strong style="font-size: 32px; color: #2c3e50;">${workerData.pin}</strong>
                         </p>
                     </div>
                 </div>
@@ -4335,7 +4452,7 @@ showWorkerQR(worker) {
     }, 100);
     
     // Botão para gerar NOVO QR Code
-    const btnRegenerateQR = modal.querySelector(`#btnRegenerateQR_${worker.id}`);
+    const btnRegenerateQR = modal.querySelector(`#btnRegenerateQR_${workerData.id}`);
     if (btnRegenerateQR) {
         btnRegenerateQR.addEventListener('click', () => {
             // Mostrar loading
@@ -4347,20 +4464,20 @@ showWorkerQR(worker) {
             // Regenerar após pequeno delay
             setTimeout(() => {
                 const success = generateQRCode();
-                if (success && window.PontoApp && window.PontoApp.showNotification) {
-                    window.PontoApp.showNotification('Novo QR Code gerado!', 'success');
-                } else if (!success && window.PontoApp && window.PontoApp.showNotification) {
-                    window.PontoApp.showNotification('A usar PIN como fallback', 'warning');
+                if (success) {
+                    window.PontoApp?.showNotification('Novo QR Code gerado!', 'success');
+                } else {
+                    window.PontoApp?.showNotification('A usar PIN como fallback', 'warning');
                 }
             }, 300);
         });
     }
     
     // Botão para imprimir
-    const btnPrintQR = modal.querySelector(`#btnPrintQR_${worker.id}`);
+    const btnPrintQR = modal.querySelector(`#btnPrintQR_${workerData.id}`);
     if (btnPrintQR) {
         btnPrintQR.addEventListener('click', () => {
-            this.printQR(worker.name, worker.pin, worker.role);
+            this.printQR(workerData.name, workerData.pin, workerData.role);
         });
     }
     
