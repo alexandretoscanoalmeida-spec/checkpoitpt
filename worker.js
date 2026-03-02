@@ -1,35 +1,55 @@
 // worker.js - VERSÃO CORRIGIDA COM DESTAQUE PARA VALORES NEGATIVOS
 class WorkerInterface {
     constructor() {
-        this.currentWorker = JSON.parse(sessionStorage.getItem('currentUser'));
-        
-        if (!this.currentWorker) {
-            window.location.href = 'index.html';
-            return;
-        }
-        
-        this.currentDate = new Date();
-        this.currentYear = this.currentDate.getFullYear();
-        this.currentMonth = this.currentDate.getMonth() + 1;
-        
-        this.init();
+    this.currentWorker = JSON.parse(sessionStorage.getItem('currentUser'));
+    
+    if (!this.currentWorker) {
+        window.location.href = 'index.html';
+        return;
     }
+    
+    this.currentDate = new Date();
+    this.currentYear = this.currentDate.getFullYear();
+    this.currentMonth = this.currentDate.getMonth() + 1;
+    
+    // ADICIONAR ESTA LINHA:
+    this.ultimaSemana = this.getWeekNumber(this.currentDate);
+    
+    this.init();
+}
 
-    init() {
-        console.log("Inicializando WorkerInterface...");
+// worker.js - ADICIONAR ESTE MÉTODO init() COMPLETO
+init() {
+    console.log("Inicializando WorkerInterface...");
+    
+    this.loadWorkerData();
+    this.updateClock();
+    setInterval(() => this.updateClock(), 1000);
+    
+    this.setupEventListeners();
+    this.initializeFilters();
+    this.updateTodayRegistries();
+    this.loadAllRegistries();
+    this.loadBankHours();
+    
+    // ADICIONAR ESTA LINHA:
+    this.loadMySchedule(); // Carregar horário da semana atual
+    
+    // Verificar mudança de semana automaticamente
+    setInterval(() => {
+        const hoje = new Date();
+        const semanaAtual = this.getWeekNumber(hoje);
         
-        this.loadWorkerData();
-        this.updateClock();
-        setInterval(() => this.updateClock(), 1000);
-        
-        this.setupEventListeners();
-        this.initializeFilters();
-        this.updateTodayRegistries();
-        this.loadAllRegistries();
-        this.loadBankHours(); // Carregar banco de horas real
-        
-        console.log("WorkerInterface inicializado com sucesso");
-    }
+        // Se a semana mudou desde a última verificação
+        if (this.ultimaSemana !== semanaAtual) {
+            console.log(`📅 Semana mudou de ${this.ultimaSemana} para ${semanaAtual}. Recarregando horário...`);
+            this.loadMySchedule();
+            this.ultimaSemana = semanaAtual;
+        }
+    }, 3600000); // Verificar a cada hora
+    
+    console.log("WorkerInterface inicializado com sucesso");
+}
 
     loadWorkerData() {
         console.log("Carregando dados do trabalhador...");
@@ -217,34 +237,39 @@ class WorkerInterface {
     }
 
     navigateTo(pageId) {
-        console.log(`Executando navegação para: ${pageId}`);
-        
-        const allSections = document.querySelectorAll('.content-section');
-        allSections.forEach(section => {
-            section.classList.remove('active');
-        });
-        
-        const targetSection = document.getElementById(pageId);
-        if (targetSection) {
-            targetSection.classList.add('active');
-            console.log(`Seção ${pageId} tornada visível`);
-        } else {
-            console.error(`Seção ${pageId} não encontrada!`);
-        }
-        
-        const allLinks = document.querySelectorAll('.nav-link');
-        allLinks.forEach(link => {
-            link.classList.remove('active');
-            
-            const linkPage = link.getAttribute('data-page');
-            if (linkPage === pageId) {
-                link.classList.add('active');
-                console.log(`Link ${pageId} marcado como ativo`);
-            }
-        });
-        
-        this.loadPageContent(pageId);
+    console.log(`Executando navegação para: ${pageId}`);
+    
+    const allSections = document.querySelectorAll('.content-section');
+    allSections.forEach(section => {
+        section.classList.remove('active');
+    });
+    
+    const targetSection = document.getElementById(pageId);
+    if (targetSection) {
+        targetSection.classList.add('active');
+        console.log(`Seção ${pageId} tornada visível`);
+    } else {
+        console.error(`Seção ${pageId} não encontrada!`);
     }
+    
+    const allLinks = document.querySelectorAll('.nav-link');
+    allLinks.forEach(link => {
+        link.classList.remove('active');
+        
+        const linkPage = link.getAttribute('data-page');
+        if (linkPage === pageId) {
+            link.classList.add('active');
+            console.log(`Link ${pageId} marcado como ativo`);
+        }
+    });
+    
+    this.loadPageContent(pageId);
+    
+    // ADICIONAR ESTA LINHA - Atualizar horário sempre que aceder à página de horário
+    if (pageId === 'horario') {
+        this.loadMySchedule();
+    }
+}
 
     loadPageContent(pageId) {
         switch(pageId) {
@@ -631,10 +656,231 @@ class WorkerInterface {
         return months[monthNumber];
     }
 
-    loadMySchedule() {
-        console.log("Carregando horário...");
-        // O conteúdo já está no HTML por enquanto
+    // worker.js - CORREÇÃO: Carregar horário baseado na semana atual
+loadMySchedule() {
+    console.log("📅 Carregando horário da semana atual...");
+    
+    if (!window.PontoApp) {
+        console.error("PontoApp não inicializado");
+        this.showNotification("Erro ao carregar horário", 'error');
+        return;
     }
+    
+    const workerId = this.currentWorker.id;
+    const hoje = new Date();
+    const anoAtual = hoje.getFullYear();
+    const semanaAtual = this.getWeekNumber(hoje);
+    
+    console.log(`📅 Semana atual: ${semanaAtual} do ano ${anoAtual}`);
+    
+    // 1. VERIFICAR SE TEM HORÁRIO ESPECÍFICO PARA ESTA SEMANA
+    let horarioDaSemana = null;
+    let templateId = null;
+    
+    if (window.PontoApp.weekScheduleAssignments && 
+        window.PontoApp.weekScheduleAssignments[workerId] &&
+        window.PontoApp.weekScheduleAssignments[workerId][anoAtual] &&
+        window.PontoApp.weekScheduleAssignments[workerId][anoAtual][semanaAtual]) {
+        
+        templateId = window.PontoApp.weekScheduleAssignments[workerId][anoAtual][semanaAtual];
+        console.log(`✅ Encontrado horário específico para semana ${semanaAtual}: template ID ${templateId}`);
+        
+        // Buscar template
+        if (window.PontoApp.scheduleTemplates) {
+            horarioDaSemana = window.PontoApp.scheduleTemplates.find(t => t.id === templateId);
+        }
+    }
+    
+    // 2. SE NÃO TEM HORÁRIO PARA A SEMANA, USAR HORÁRIO PADRÃO DO TRABALHADOR
+    if (!horarioDaSemana) {
+        console.log("ℹ️ Usando horário padrão do trabalhador");
+        
+        // Verificar se o trabalhador tem horário definido
+        const scheduleData = window.PontoApp.schedules[workerId];
+        
+        if (scheduleData && scheduleData.reference) {
+            // Criar um template temporário a partir do horário padrão
+            horarioDaSemana = {
+                id: 0,
+                name: 'Horário Padrão',
+                days: scheduleData.reference,
+                totalHours: this.calcularTotalHorasSemana(scheduleData.reference)
+            };
+        }
+    }
+    
+    // 3. SE AINDA NÃO TEM, USAR HORÁRIO PADRÃO FIXO
+    if (!horarioDaSemana) {
+        console.log("ℹ️ Usando horário padrão fixo");
+        horarioDaSemana = {
+            id: 0,
+            name: 'Horário Base',
+            days: [
+                { day: 1, start: '09:00', end: '17:00', break: '13:00-14:00' },
+                { day: 2, start: '09:00', end: '17:00', break: '13:00-14:00' },
+                { day: 3, start: '09:00', end: '17:00', break: '13:00-14:00' },
+                { day: 4, start: '09:00', end: '17:00', break: '13:00-14:00' },
+                { day: 5, start: '09:00', end: '17:00', break: '13:00-14:00' }
+            ],
+            totalHours: 35
+        };
+    }
+    
+    // 4. PREENCHER A TABELA DE HORÁRIO
+    this.renderScheduleTable(horarioDaSemana, semanaAtual, anoAtual);
+    
+    // 5. MOSTRAR INFORMAÇÃO DA SEMANA
+    this.showWeekInfo(semanaAtual, anoAtual, horarioDaSemana.name);
+}
+
+// Função auxiliar para calcular total de horas da semana
+calcularTotalHorasSemana(days) {
+    if (!days || days.length === 0) return 0;
+    
+    let total = 0;
+    days.forEach(day => {
+        if (day.start && day.end) {
+            const start = this.timeToMinutes(day.start);
+            const end = this.timeToMinutes(day.end);
+            let dayHours = (end - start) / 60;
+            
+            if (day.break) {
+                const [breakStart, breakEnd] = day.break.split('-').map(t => this.timeToMinutes(t));
+                if (breakStart && breakEnd) {
+                    dayHours -= (breakEnd - breakStart) / 60;
+                }
+            }
+            total += dayHours;
+        }
+    });
+    return parseFloat(total.toFixed(1));
+}
+
+// Função auxiliar para converter time para minutos
+timeToMinutes(time) {
+    if (!time) return 0;
+    const [hours, minutes] = time.split(':').map(Number);
+    return hours * 60 + minutes;
+}
+
+// Função para obter número da semana
+getWeekNumber(date) {
+    const d = new Date(date);
+    d.setHours(0, 0, 0, 0);
+    d.setDate(d.getDate() + 3 - (d.getDay() + 6) % 7);
+    const week1 = new Date(d.getFullYear(), 0, 4);
+    return 1 + Math.round(((d - week1) / 86400000 - 3 + (week1.getDay() + 6) % 7) / 7);
+}
+
+// Função para renderizar a tabela de horário
+renderScheduleTable(horario, semana, ano) {
+    const container = document.getElementById('horarioContent');
+    if (!container) return;
+    
+    const diasSemana = [
+        { id: 1, nome: 'Segunda-feira' },
+        { id: 2, nome: 'Terça-feira' },
+        { id: 3, nome: 'Quarta-feira' },
+        { id: 4, nome: 'Quinta-feira' },
+        { id: 5, nome: 'Sexta-feira' }
+    ];
+    
+    let html = `
+        <div style="margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+            <p><strong>Semana ${semana} de ${ano}</strong> - ${horario.name}</p>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Dia</th>
+                        <th>Entrada</th>
+                        <th>Saída</th>
+                        <th>Pausa</th>
+                        <th>Horas</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+    
+    diasSemana.forEach(dia => {
+        const daySchedule = horario.days.find(d => d.day === dia.id);
+        
+        if (daySchedule) {
+            const horas = this.calcularHorasDia(daySchedule);
+            html += `
+                <tr>
+                    <td>${dia.nome}</td>
+                    <td>${daySchedule.start || '-'}</td>
+                    <td>${daySchedule.end || '-'}</td>
+                    <td>${daySchedule.break || '-'}</td>
+                    <td>${horas}h</td>
+                </tr>
+            `;
+        } else {
+            html += `
+                <tr>
+                    <td>${dia.nome}</td>
+                    <td colspan="4" style="color: #6c757d;">Sem horário definido</td>
+                </tr>
+            `;
+        }
+    });
+    
+    html += `
+                </tbody>
+                <tfoot>
+                    <tr style="background: #f8f9fa; font-weight: bold;">
+                        <td colspan="4" style="text-align: right;">Total Semanal:</td>
+                        <td>${horario.totalHours}h</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    `;
+    
+    container.innerHTML = html;
+}
+
+// Função para calcular horas de um dia
+calcularHorasDia(daySchedule) {
+    if (!daySchedule || !daySchedule.start || !daySchedule.end) return 0;
+    
+    const start = this.timeToMinutes(daySchedule.start);
+    const end = this.timeToMinutes(daySchedule.end);
+    let total = (end - start) / 60;
+    
+    if (daySchedule.break) {
+        const [breakStart, breakEnd] = daySchedule.break.split('-').map(t => this.timeToMinutes(t));
+        if (breakStart && breakEnd) {
+            total -= (breakEnd - breakStart) / 60;
+        }
+    }
+    
+    return total.toFixed(1);
+}
+
+// Função para mostrar informação da semana
+showWeekInfo(semana, ano, nomeHorario) {
+    // Calcular datas da semana
+    const hoje = new Date();
+    const primeiroDiaAno = new Date(ano, 0, 1);
+    const diasOffset = (semana - 1) * 7 - (primeiroDiaAno.getDay() - 1);
+    const inicioSemana = new Date(primeiroDiaAno);
+    inicioSemana.setDate(primeiroDiaAno.getDate() + diasOffset);
+    const fimSemana = new Date(inicioSemana);
+    fimSemana.setDate(inicioSemana.getDate() + 4); // Sexta-feira
+    
+    const options = { day: '2-digit', month: '2-digit' };
+    const dataInicio = inicioSemana.toLocaleDateString('pt-PT', options);
+    const dataFim = fimSemana.toLocaleDateString('pt-PT', options);
+    
+    // Mostrar no título ou em algum lugar
+    const header = document.querySelector('#horario .header h1');
+    if (header) {
+        header.innerHTML = `Meu Horário <span style="font-size: 16px; color: #6c757d;">(Semana ${semana} - ${dataInicio} a ${dataFim})</span>`;
+    }
+}
 
     // ===== FUNÇÃO DO BANCO DE HORAS =====
     loadBankHours() {
