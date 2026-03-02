@@ -1242,7 +1242,7 @@ resetAllData() {
         return `CHECKPOINT:PIN:${worker.pin}|NAME:${worker.name}|ROLE:${worker.role}`;
     }
 
-    // app.js - Método generateQRCodeElement MELHORADO
+// app.js - Método generateQRCodeElement CORRIGIDO
 generateQRCodeElement(workerId, elementId, size = 200) {
     const worker = this.workers.find(w => w.id === workerId);
     if (!worker) {
@@ -1258,13 +1258,15 @@ generateQRCodeElement(workerId, elementId, size = 200) {
         return false;
     }
     
-    // Limpar container
-    container.innerHTML = '';
+    // LIMPAR COMPLETAMENTE O CONTAINER
+    while (container.firstChild) {
+        container.removeChild(container.firstChild);
+    }
     
     // Verificar se a biblioteca QRCode está carregada
     if (typeof QRCode !== 'undefined') {
         try {
-            // Criar novo QR Code
+            // CRIAR NOVA INSTÂNCIA
             new QRCode(container, {
                 text: qrData,
                 width: size,

@@ -4202,7 +4202,7 @@ class AdminInterface {
         }
     }
 
-// admin.js - Função showWorkerQR CORRIGIDA E COMPLETA
+// admin.js - Função showWorkerQR CORRIGIDA DEFINITIVAMENTE
 showWorkerQR(worker) {
     console.log('Mostrando QR Code para:', worker.name);
     
@@ -4215,8 +4215,8 @@ showWorkerQR(worker) {
                 <button class="btn btn-small btn-close close-modal">×</button>
             </div>
             <div class="modal-body" style="text-align: center;">
-                <!-- Container do QR Code -->
-                <div id="workerQRCode" style="width: 250px; height: 250px; margin: 20px auto;"></div>
+                <!-- Container do QR Code - COM ID ÚNICO -->
+                <div id="workerQRCode_${worker.id}" style="width: 250px; height: 250px; margin: 20px auto;"></div>
                 
                 <!-- Informações do trabalhador -->
                 <div style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
@@ -4227,33 +4227,44 @@ showWorkerQR(worker) {
                 </div>
                 
                 <!-- Mensagem de erro (inicialmente oculta) -->
-                <div id="qrError" style="display: none; margin-top: 15px; padding: 10px; background: #f8d7da; color: #721c24; border-radius: 5px;">
+                <div id="qrError_${worker.id}" style="display: none; margin-top: 15px; padding: 10px; background: #f8d7da; color: #721c24; border-radius: 5px;">
                     ⚠️ Erro ao gerar QR Code. Use o PIN para fazer login.
                 </div>
             </div>
             <div class="modal-footer">
                 <button class="btn btn-secondary close-modal">Fechar</button>
-                <button class="btn btn-primary" id="btnPrintQR">🖨️ Imprimir</button>
-                <button class="btn btn-success" id="btnRegenerateQR">🔄 Gerar Novo QR Code</button>
+                <button class="btn btn-primary" id="btnPrintQR_${worker.id}">🖨️ Imprimir</button>
+                <button class="btn btn-success" id="btnRegenerateQR_${worker.id}">🔄 Gerar Novo QR Code</button>
             </div>
         </div>
     `;
     
     document.getElementById('modalContainer').appendChild(modal);
     
-    // Fechar modal com botões X
-    modal.querySelectorAll('.close-modal').forEach(btn => {
-        btn.addEventListener('click', () => this.closeModal(modal));
-    });
+    // VARIÁVEL PARA CONTROLAR INSTÂNCIA DO QR CODE
+    let qrCodeInstance = null;
+    const qrContainerId = `workerQRCode_${worker.id}`;
     
-    // Função para gerar o QR Code
+    // FUNÇÃO PARA LIMPAR O QR CODE ANTERIOR
+    const destroyQRCode = () => {
+        const container = document.getElementById(qrContainerId);
+        if (container) {
+            // Remover todos os filhos (canvas, img, divs)
+            while (container.firstChild) {
+                container.removeChild(container.firstChild);
+            }
+        }
+        qrCodeInstance = null;
+    };
+    
+    // FUNÇÃO PARA GERAR O QR CODE
     const generateQRCode = () => {
-        const qrContainer = document.getElementById('workerQRCode');
-        const errorContainer = document.getElementById('qrError');
+        destroyQRCode(); // LIMPAR COMPLETAMENTE
         
-        // Limpar conteúdo anterior
-        qrContainer.innerHTML = '';
-        errorContainer.style.display = 'none';
+        const container = document.getElementById(qrContainerId);
+        const errorContainer = document.getElementById(`qrError_${worker.id}`);
+        
+        if (!container) return false;
         
         try {
             // Verificar se PontoApp existe
@@ -4261,31 +4272,41 @@ showWorkerQR(worker) {
                 throw new Error('PontoApp não inicializado');
             }
             
-            // Tentar gerar QR Code
-            const success = window.PontoApp.generateQRCodeElement(worker.id, 'workerQRCode', 250);
+            const qrData = window.PontoApp.generateQRCode(worker.id);
             
-            if (!success) {
-                // Se falhou, mostrar fallback
-                qrContainer.innerHTML = `
-                    <div style="width: 250px; height: 250px; background: #f0f0f0; display: flex; align-items: center; justify-content: center; border-radius: 10px; margin: 0 auto; border: 2px dashed #ccc;">
-                        <div style="text-align: center;">
-                            <span style="font-size: 48px;">📱</span>
-                            <p style="color: #666; margin-top: 10px;">
-                                QR Code temporário<br>
-                                <strong style="font-size: 24px;">${worker.pin}</strong>
-                            </p>
-                        </div>
-                    </div>
-                `;
+            // Verificar se a biblioteca QRCode está disponível
+            if (typeof QRCode !== 'undefined') {
+                try {
+                    // CRIAR NOVA INSTÂNCIA
+                    qrCodeInstance = new QRCode(container, {
+                        text: qrData,
+                        width: 250,
+                        height: 250,
+                        colorDark: "#000000",
+                        colorLight: "#ffffff",
+                        correctLevel: QRCode.CorrectLevel.H
+                    });
+                    
+                    console.log(`✅ QR Code gerado para ${worker.name}`);
+                    if (errorContainer) errorContainer.style.display = 'none';
+                    return true;
+                    
+                } catch (qrError) {
+                    console.error('Erro na biblioteca QRCode:', qrError);
+                    throw qrError;
+                }
+            } else {
+                console.warn('⚠️ Biblioteca QRCode não carregada');
+                throw new Error('Biblioteca QRCode não disponível');
             }
         } catch (error) {
-            console.error('Erro ao gerar QR Code:', error);
+            console.error('❌ Erro ao gerar QR Code:', error);
             
             // Mostrar mensagem de erro
-            errorContainer.style.display = 'block';
+            if (errorContainer) errorContainer.style.display = 'block';
             
-            // Mostrar fallback
-            qrContainer.innerHTML = `
+            // FALLBACK VISUAL
+            container.innerHTML = `
                 <div style="width: 250px; height: 250px; background: #f0f0f0; display: flex; align-items: center; justify-content: center; border-radius: 10px; margin: 0 auto; border: 2px dashed #e74c3c;">
                     <div style="text-align: center;">
                         <span style="font-size: 48px;">⚠️</span>
@@ -4296,8 +4317,17 @@ showWorkerQR(worker) {
                     </div>
                 </div>
             `;
+            return false;
         }
     };
+    
+    // Fechar modal com botões X
+    modal.querySelectorAll('.close-modal').forEach(btn => {
+        btn.addEventListener('click', () => {
+            destroyQRCode();
+            this.closeModal(modal);
+        });
+    });
     
     // Gerar QR Code após um pequeno delay
     setTimeout(() => {
@@ -4305,25 +4335,29 @@ showWorkerQR(worker) {
     }, 100);
     
     // Botão para gerar NOVO QR Code
-    const btnRegenerateQR = modal.querySelector('#btnRegenerateQR');
+    const btnRegenerateQR = modal.querySelector(`#btnRegenerateQR_${worker.id}`);
     if (btnRegenerateQR) {
         btnRegenerateQR.addEventListener('click', () => {
             // Mostrar loading
-            const qrContainer = document.getElementById('workerQRCode');
-            qrContainer.innerHTML = '<div style="text-align: center; padding: 100px 0;">🔄 Gerando novo QR Code...</div>';
+            const container = document.getElementById(qrContainerId);
+            if (container) {
+                container.innerHTML = '<div style="text-align: center; padding: 100px 0;">🔄 Gerando novo QR Code...</div>';
+            }
             
             // Regenerar após pequeno delay
             setTimeout(() => {
-                generateQRCode();
-                if (window.PontoApp && window.PontoApp.showNotification) {
+                const success = generateQRCode();
+                if (success && window.PontoApp && window.PontoApp.showNotification) {
                     window.PontoApp.showNotification('Novo QR Code gerado!', 'success');
+                } else if (!success && window.PontoApp && window.PontoApp.showNotification) {
+                    window.PontoApp.showNotification('A usar PIN como fallback', 'warning');
                 }
             }, 300);
         });
     }
     
     // Botão para imprimir
-    const btnPrintQR = modal.querySelector('#btnPrintQR');
+    const btnPrintQR = modal.querySelector(`#btnPrintQR_${worker.id}`);
     if (btnPrintQR) {
         btnPrintQR.addEventListener('click', () => {
             this.printQR(worker.name, worker.pin, worker.role);
@@ -4333,6 +4367,7 @@ showWorkerQR(worker) {
     // Fechar modal clicando fora
     modal.addEventListener('click', (e) => {
         if (e.target === modal) {
+            destroyQRCode();
             this.closeModal(modal);
         }
     });
