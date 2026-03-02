@@ -4300,7 +4300,7 @@ repairWorkerData(workerId) {
     return false;
 }
 
-// admin.js - Versão SIMPLIFICADA e GARANTIDA
+// admin.js - Versão usando QRCode com canvas
 async showWorkerQR(worker) {
     console.log('📱 A gerar QR Code para:', worker.name);
     
@@ -4323,7 +4323,12 @@ async showWorkerQR(worker) {
             </div>
             <div class="modal-body" style="text-align: center;">
                 <!-- Container do QR Code -->
-                <div id="qr_${workerData.id}" style="width: 250px; height: 250px; margin: 20px auto;"></div>
+                <div id="qr_${workerData.id}" style="width: 250px; height: 250px; margin: 20px auto; display: flex; align-items: center; justify-content: center;">
+                    <div style="text-align: center; color: #666;">
+                        <div style="font-size: 24px; margin-bottom: 10px;">⏳</div>
+                        <div>A gerar QR Code...</div>
+                    </div>
+                </div>
                 
                 <!-- Informações do trabalhador -->
                 <div style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
@@ -4344,42 +4349,44 @@ async showWorkerQR(worker) {
     const container = document.getElementById(`qr_${workerData.id}`);
     const qrData = `CHECKPOINT:PIN:${workerData.pin}`;
     
-    // FUNÇÃO PARA TENTAR GERAR QR CODE
-    const tryGenerateQR = () => {
+    // FUNÇÃO PARA GERAR QR CODE
+    const generateQR = () => {
         // Limpar container
         container.innerHTML = '';
-        
-        // Mostrar loading
-        container.innerHTML = '<div style="text-align: center; padding: 100px 0;">⏳ A gerar...</div>';
         
         // Verificar se a biblioteca está disponível
         if (typeof QRCode !== 'undefined') {
             try {
-                // Limpar loading
-                container.innerHTML = '';
+                // Criar elemento canvas
+                const canvas = document.createElement('canvas');
                 
-                // Criar QR Code
-                new QRCode(container, {
-                    text: qrData,
+                // Gerar QR Code
+                QRCode.toCanvas(canvas, qrData, {
                     width: 250,
-                    height: 250,
-                    colorDark: "#000000",
-                    colorLight: "#ffffff",
-                    correctLevel: QRCode.CorrectLevel.H
+                    margin: 2,
+                    color: {
+                        dark: '#000000',
+                        light: '#ffffff'
+                    }
+                }, (error) => {
+                    if (error) {
+                        console.error('❌ Erro ao gerar QR Code:', error);
+                        showFallback();
+                    } else {
+                        // Limpar e adicionar o canvas
+                        container.innerHTML = '';
+                        container.appendChild(canvas);
+                        console.log('✅ QR Code gerado com sucesso');
+                    }
                 });
                 
-                console.log('✅ QR Code gerado com sucesso');
-                return true;
-                
             } catch (error) {
-                console.error('❌ Erro ao gerar QR Code:', error);
+                console.error('❌ Erro:', error);
                 showFallback();
-                return false;
             }
         } else {
             console.warn('⚠️ QRCode não disponível');
             showFallback();
-            return false;
         }
     };
     
@@ -4400,9 +4407,7 @@ async showWorkerQR(worker) {
     // CARREGAR BIBLIOTECA E GERAR
     this.loadQRCodeLibrary().then(() => {
         // Pequeno delay para garantir
-        setTimeout(() => {
-            tryGenerateQR();
-        }, 100);
+        setTimeout(generateQR, 100);
     }).catch(() => {
         showFallback();
     });
@@ -4410,9 +4415,7 @@ async showWorkerQR(worker) {
     // Botão regenerar
     const btnRegenerate = document.getElementById(`regenerate_${workerData.id}`);
     if (btnRegenerate) {
-        btnRegenerate.addEventListener('click', () => {
-            tryGenerateQR();
-        });
+        btnRegenerate.addEventListener('click', generateQR);
     }
     
     // Fechar modal
@@ -4705,65 +4708,35 @@ async showWorkerQR(worker) {
     }
     }
 	
-// admin.js - Versão SIMPLIFICADA e GARANTIDA
+// admin.js - Versão usando biblioteca alternativa
 loadQRCodeLibrary() {
     return new Promise((resolve, reject) => {
-        // Verificar se já está carregado
+        // Verificar se a biblioteca já está carregada
         if (typeof QRCode !== 'undefined') {
-            console.log('✅ QRCode já carregado');
+            console.log('✅ QRCode library já carregada');
             resolve();
             return;
         }
         
-        console.log('📥 A carregar biblioteca QRCode...');
+        console.log('📥 A carregar biblioteca QRCode alternativa...');
         
-        // CARREGAR DE MÚLTIPLAS FONTES para garantir
-        const scripts = [
-            'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js',
-            'https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js'
-        ];
+        // Carregar a biblioteca
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js';
+        script.async = true;
         
-        let loaded = false;
-        let attempts = 0;
-        
-        const tryLoad = (index) => {
-            if (index >= scripts.length) {
-                console.error('❌ Todas as tentativas falharam');
-                reject(new Error('Falha ao carregar QRCode'));
-                return;
-            }
-            
-            const script = document.createElement('script');
-            script.src = scripts[index];
-            script.async = true;
-            
-            script.onload = () => {
-                console.log(`✅ QRCode carregado de: ${scripts[index]}`);
-                loaded = true;
-                resolve();
-            };
-            
-            script.onerror = () => {
-                console.warn(`⚠️ Falha ao carregar de: ${scripts[index]}`);
-                if (!loaded) {
-                    tryLoad(index + 1);
-                }
-            };
-            
-            document.head.appendChild(script);
+        script.onload = () => {
+            console.log('✅ QRCode library carregada com sucesso');
+            // Dar tempo para inicializar
+            setTimeout(resolve, 100);
         };
         
-        // Iniciar tentativas
-        tryLoad(0);
+        script.onerror = () => {
+            console.error('❌ Erro ao carregar QRCode library');
+            reject(new Error('Falha ao carregar biblioteca QRCode'));
+        };
         
-        // Timeout de segurança
-        setTimeout(() => {
-            if (!loaded && typeof QRCode === 'undefined') {
-                console.warn('⏰ Timeout - a usar fallback');
-                // Não rejeitar, apenas continuar com fallback
-                resolve(); // Resolver mesmo assim para não bloquear
-            }
-        }, 5000);
+        document.head.appendChild(script);
     });
 }
 
