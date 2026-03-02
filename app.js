@@ -1246,55 +1246,75 @@ resetAllData() {
 generateQRCodeElement(workerId, elementId, size = 200) {
     console.log(`🔧 Gerando QR Code para worker ${workerId} no elemento ${elementId}`);
     
+    // VALIDAÇÕES INICIAIS
+    if (!window.PontoApp) {
+        console.error('❌ PontoApp não inicializado');
+        return false;
+    }
+    
     const worker = this.workers.find(w => w.id === workerId);
     if (!worker) {
         console.error('❌ Trabalhador não encontrado para gerar QR Code');
         return false;
     }
     
-    const qrData = this.generateQRCode(workerId);
     const container = document.getElementById(elementId);
-    
     if (!container) {
         console.error('❌ Container não encontrado para QR Code:', elementId);
         return false;
     }
     
-    // Limpar container
-    container.innerHTML = '';
-    
-    // Verificar se a biblioteca QRCode está carregada
-    if (typeof QRCode === 'undefined') {
-        console.error('❌ Biblioteca QRCode não está carregada!');
-        
-        // Tentar carregar a biblioteca dinamicamente
-        this.loadQRCodeLibrary(() => {
-            // Tentar novamente após carregar
-            setTimeout(() => {
-                this.generateQRCodeElement(workerId, elementId, size);
-            }, 500);
-        });
-        
-        // Mostrar fallback imediato
-        container.innerHTML = `
-            <div style="width: ${size}px; height: ${size}px; background: #f8f9fa; display: flex; align-items: center; justify-content: center; border-radius: 10px; margin: 0 auto; border: 2px solid #dee2e6;">
-                <div style="text-align: center;">
-                    <span style="font-size: 40px;">⏳</span>
-                    <p style="color: #495057; margin: 10px 0 5px;">A carregar...</p>
-                    <p style="color: #6c757d; font-size: 12px;">PIN: ${worker.pin}</p>
-                </div>
-            </div>
-        `;
-        return false;
+    // ===== LIMPEZA RADICAL DO CONTAINER =====
+    // Método 1: Remover todos os filhos
+    while (container.firstChild) {
+        container.removeChild(container.firstChild);
     }
     
+    // Método 2: Limpar innerHTML (reforço)
+    container.innerHTML = '';
+    
+    // Método 3: Remover e recriar o container (se necessário)
     try {
-        // LIMPAR QUALQUER QR CODE ANTERIOR
-        while (container.firstChild) {
-            container.removeChild(container.firstChild);
+        // Verificar se a biblioteca QRCode está carregada
+        if (typeof QRCode === 'undefined') {
+            console.error('❌ Biblioteca QRCode não carregada');
+            
+            // Tentar carregar a biblioteca
+            this.loadQRCodeLibrary();
+            
+            // Fallback visual
+            container.innerHTML = `
+                <div style="width: ${size}px; height: ${size}px; background: #f8f9fa; display: flex; align-items: center; justify-content: center; border-radius: 10px; margin: 0 auto; border: 2px solid #ffc107;">
+                    <div style="text-align: center;">
+                        <span style="font-size: 40px;">⏳</span>
+                        <p style="color: #495057; margin: 10px 0 5px;"><strong>PIN: ${worker.pin}</strong></p>
+                        <p style="color: #6c757d; font-size: 12px;">A carregar biblioteca...</p>
+                    </div>
+                </div>
+            `;
+            
+            // Tentar novamente após 1 segundo
+            setTimeout(() => {
+                if (typeof QRCode !== 'undefined') {
+                    this.generateQRCodeElement(workerId, elementId, size);
+                }
+            }, 1000);
+            
+            return false;
         }
         
-        // CRIAR NOVO QR CODE - USANDO O ID, NÃO O ELEMENTO!
+        // Preparar dados do QR Code
+        const qrData = `CHECKPOINT:PIN:${worker.pin}|NAME:${worker.name}|ROLE:${worker.role}`;
+        
+        // ===== DESTRUIR QUALQUER INSTÂNCIA ANTERIOR =====
+        // Se houver um canvas ou img anterior, garantir que seja removido
+        const oldCanvas = container.querySelector('canvas');
+        const oldImg = container.querySelector('img');
+        if (oldCanvas) oldCanvas.remove();
+        if (oldImg) oldImg.remove();
+        
+        // ===== CRIAR NOVO QR CODE =====
+        // IMPORTANTE: Passar o ID do elemento, NÃO o elemento
         new QRCode(document.getElementById(elementId), {
             text: qrData,
             width: size,
@@ -1304,15 +1324,32 @@ generateQRCodeElement(workerId, elementId, size = 200) {
             correctLevel: QRCode.CorrectLevel.H
         });
         
-        console.log(`✅ QR Code gerado com sucesso para ${worker.name}`);
-        
-        // Adicionar uma pequena validação visual
+        // ===== VALIDAÇÃO PÓS-CRIAÇÃO =====
         setTimeout(() => {
             const img = container.querySelector('img');
-            if (!img) {
-                console.warn('⚠️ QR Code pode não ter sido gerado corretamente');
+            const canvas = container.querySelector('canvas');
+            
+            if (img || canvas) {
+                console.log(`✅ QR Code gerado com sucesso para ${worker.name}`);
+                
+                // Esconder mensagem de erro se existir
+                const errorDiv = document.getElementById('qrError');
+                if (errorDiv) errorDiv.style.display = 'none';
+            } else {
+                console.error('❌ QR Code não foi gerado (sem imagem ou canvas)');
+                
+                // Fallback de emergência
+                container.innerHTML = `
+                    <div style="width: ${size}px; height: ${size}px; background: #f8f9fa; display: flex; align-items: center; justify-content: center; border-radius: 10px; margin: 0 auto; border: 2px solid #dc3545;">
+                        <div style="text-align: center;">
+                            <span style="font-size: 40px;">🔑</span>
+                            <p style="color: #495057; margin: 10px 0 5px;"><strong>PIN: ${worker.pin}</strong></p>
+                            <p style="color: #6c757d; font-size: 12px;">Use o PIN para login</p>
+                        </div>
+                    </div>
+                `;
             }
-        }, 500);
+        }, 100);
         
         return true;
         
@@ -1325,7 +1362,7 @@ generateQRCodeElement(workerId, elementId, size = 200) {
                 <div style="text-align: center;">
                     <span style="font-size: 40px;">⚠️</span>
                     <p style="color: #495057; margin: 10px 0 5px;"><strong>PIN: ${worker.pin}</strong></p>
-                    <p style="color: #6c757d; font-size: 12px;">Erro ao gerar QR Code</p>
+                    <p style="color: #6c757d; font-size: 12px;">Erro: ${error.message}</p>
                 </div>
             </div>
         `;
@@ -1333,24 +1370,24 @@ generateQRCodeElement(workerId, elementId, size = 200) {
     }
 }
 
-// Adicionar este método helper em app.js
-loadQRCodeLibrary(callback) {
-    if (typeof QRCode !== 'undefined') {
-        if (callback) callback();
-        return;
-    }
+// Método auxiliar para carregar biblioteca (APENAS UMA VEZ!)
+loadQRCodeLibrary() {
+    if (typeof QRCode !== 'undefined') return true;
     
-    console.log('📥 A carregar biblioteca QRCode...');
-    const script = document.createElement('script');
-    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
-    script.onload = () => {
-        console.log('✅ Biblioteca QRCode carregada com sucesso');
-        if (callback) callback();
-    };
-    script.onerror = () => {
-        console.error('❌ Falha ao carregar biblioteca QRCode');
-    };
-    document.head.appendChild(script);
+    console.log('📥 Carregando biblioteca QRCode...');
+    return new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
+        script.onload = () => {
+            console.log('✅ Biblioteca QRCode carregada');
+            resolve(true);
+        };
+        script.onerror = () => {
+            console.error('❌ Falha ao carregar QRCode');
+            reject(false);
+        };
+        document.head.appendChild(script);
+    });
 }
 
     // MODIFICADO: registerPunch - Forçar atualização após registo
