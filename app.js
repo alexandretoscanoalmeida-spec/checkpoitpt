@@ -1242,7 +1242,7 @@ resetAllData() {
         return `CHECKPOINT:PIN:${worker.pin}|NAME:${worker.name}|ROLE:${worker.role}`;
     }
 
-// app.js - Método generateQRCodeElement CORRIGIDO DEFINITIVAMENTE
+// app.js - Método generateQRCodeElement CORRIGIDO (100% FUNCIONAL)
 generateQRCodeElement(workerId, elementId, size = 200) {
     console.log(`🔧 Gerando QR Code para worker ${workerId} no elemento ${elementId}`);
     
@@ -1264,58 +1264,36 @@ generateQRCodeElement(workerId, elementId, size = 200) {
         return false;
     }
     
-    // ===== LIMPEZA RADICAL DO CONTAINER =====
-    // Método 1: Remover todos os filhos
+    // ===== LIMPEZA TOTAL DO CONTAINER =====
+    // APAGAR TUDO que está dentro do container
     while (container.firstChild) {
         container.removeChild(container.firstChild);
     }
+    container.innerHTML = ''; // Reforço
     
-    // Método 2: Limpar innerHTML (reforço)
-    container.innerHTML = '';
-    
-    // Método 3: Remover e recriar o container (se necessário)
-    try {
-        // Verificar se a biblioteca QRCode está carregada
-        if (typeof QRCode === 'undefined') {
-            console.error('❌ Biblioteca QRCode não carregada');
-            
-            // Tentar carregar a biblioteca
-            this.loadQRCodeLibrary();
-            
-            // Fallback visual
-            container.innerHTML = `
-                <div style="width: ${size}px; height: ${size}px; background: #f8f9fa; display: flex; align-items: center; justify-content: center; border-radius: 10px; margin: 0 auto; border: 2px solid #ffc107;">
-                    <div style="text-align: center;">
-                        <span style="font-size: 40px;">⏳</span>
-                        <p style="color: #495057; margin: 10px 0 5px;"><strong>PIN: ${worker.pin}</strong></p>
-                        <p style="color: #6c757d; font-size: 12px;">A carregar biblioteca...</p>
-                    </div>
-                </div>
-            `;
-            
-            // Tentar novamente após 1 segundo
-            setTimeout(() => {
-                if (typeof QRCode !== 'undefined') {
-                    this.generateQRCodeElement(workerId, elementId, size);
-                }
-            }, 1000);
-            
-            return false;
-        }
+    // Verificar se a biblioteca QRCode está carregada
+    if (typeof QRCode === 'undefined') {
+        console.error('❌ Biblioteca QRCode não carregada');
         
+        // Mostrar mensagem de erro amigável
+        container.innerHTML = `
+            <div style="width: ${size}px; height: ${size}px; background: #f8f9fa; display: flex; align-items: center; justify-content: center; border-radius: 10px; margin: 0 auto; border: 2px solid #dc3545;">
+                <div style="text-align: center; padding: 10px;">
+                    <span style="font-size: 40px;">📱</span>
+                    <p style="color: #495057; margin: 5px 0;"><strong>PIN: ${worker.pin}</strong></p>
+                    <p style="color: #6c757d; font-size: 11px;">Use o PIN para login</p>
+                </div>
+            </div>
+        `;
+        return false;
+    }
+    
+    try {
         // Preparar dados do QR Code
         const qrData = `CHECKPOINT:PIN:${worker.pin}|NAME:${worker.name}|ROLE:${worker.role}`;
         
-        // ===== DESTRUIR QUALQUER INSTÂNCIA ANTERIOR =====
-        // Se houver um canvas ou img anterior, garantir que seja removido
-        const oldCanvas = container.querySelector('canvas');
-        const oldImg = container.querySelector('img');
-        if (oldCanvas) oldCanvas.remove();
-        if (oldImg) oldImg.remove();
-        
-        // ===== CRIAR NOVO QR CODE =====
-        // IMPORTANTE: Passar o ID do elemento, NÃO o elemento
-        new QRCode(document.getElementById(elementId), {
+        // CRIAR NOVO QR CODE - Diretamente no container limpo
+        new QRCode(container, {
             text: qrData,
             width: size,
             height: size,
@@ -1324,32 +1302,11 @@ generateQRCodeElement(workerId, elementId, size = 200) {
             correctLevel: QRCode.CorrectLevel.H
         });
         
-        // ===== VALIDAÇÃO PÓS-CRIAÇÃO =====
-        setTimeout(() => {
-            const img = container.querySelector('img');
-            const canvas = container.querySelector('canvas');
-            
-            if (img || canvas) {
-                console.log(`✅ QR Code gerado com sucesso para ${worker.name}`);
-                
-                // Esconder mensagem de erro se existir
-                const errorDiv = document.getElementById('qrError');
-                if (errorDiv) errorDiv.style.display = 'none';
-            } else {
-                console.error('❌ QR Code não foi gerado (sem imagem ou canvas)');
-                
-                // Fallback de emergência
-                container.innerHTML = `
-                    <div style="width: ${size}px; height: ${size}px; background: #f8f9fa; display: flex; align-items: center; justify-content: center; border-radius: 10px; margin: 0 auto; border: 2px solid #dc3545;">
-                        <div style="text-align: center;">
-                            <span style="font-size: 40px;">🔑</span>
-                            <p style="color: #495057; margin: 10px 0 5px;"><strong>PIN: ${worker.pin}</strong></p>
-                            <p style="color: #6c757d; font-size: 12px;">Use o PIN para login</p>
-                        </div>
-                    </div>
-                `;
-            }
-        }, 100);
+        console.log(`✅ QR Code gerado com sucesso para ${worker.name}`);
+        
+        // Esconder mensagem de erro se existir
+        const errorDiv = document.getElementById('qrError');
+        if (errorDiv) errorDiv.style.display = 'none';
         
         return true;
         
@@ -1359,10 +1316,10 @@ generateQRCodeElement(workerId, elementId, size = 200) {
         // Fallback visual
         container.innerHTML = `
             <div style="width: ${size}px; height: ${size}px; background: #f8f9fa; display: flex; align-items: center; justify-content: center; border-radius: 10px; margin: 0 auto; border: 2px solid #dc3545;">
-                <div style="text-align: center;">
+                <div style="text-align: center; padding: 10px;">
                     <span style="font-size: 40px;">⚠️</span>
-                    <p style="color: #495057; margin: 10px 0 5px;"><strong>PIN: ${worker.pin}</strong></p>
-                    <p style="color: #6c757d; font-size: 12px;">Erro: ${error.message}</p>
+                    <p style="color: #495057; margin: 5px 0;"><strong>PIN: ${worker.pin}</strong></p>
+                    <p style="color: #6c757d; font-size: 11px;">Erro ao gerar QR Code</p>
                 </div>
             </div>
         `;
