@@ -4300,14 +4300,11 @@ repairWorkerData(workerId) {
     return false;
 }
 
-// admin.js - Versão que aguarda a biblioteca carregar
+// admin.js - Versão SIMPLIFICADA e GARANTIDA
 async showWorkerQR(worker) {
-    console.log('Mostrando QR Code para:', worker.name);
+    console.log('📱 A gerar QR Code para:', worker.name);
     
-    // FAZER DIAGNÓSTICO ANTES
-    this.diagnoseWorkerData(worker.id);
-    
-    // USAR DADOS DIRETAMENTE DO WORKER
+    // Preparar dados do worker
     const workerData = {
         id: worker.id,
         name: worker.name || 'Trabalhador',
@@ -4315,8 +4312,7 @@ async showWorkerQR(worker) {
         role: worker.role || 'Sem Função'
     };
     
-    console.log('📱 Dados para QR Code:', workerData);
-    
+    // Criar modal
     const modal = document.createElement('div');
     modal.className = 'modal active';
     modal.innerHTML = `
@@ -4326,213 +4322,108 @@ async showWorkerQR(worker) {
                 <button class="btn btn-small btn-close close-modal">×</button>
             </div>
             <div class="modal-body" style="text-align: center;">
-                <!-- Container do QR Code - COM ID ÚNICO -->
-                <div id="workerQRCode_${workerData.id}" style="width: 250px; height: 250px; margin: 20px auto;">
-                    <!-- Loading spinner -->
-                    <div style="text-align: center; padding: 100px 0;">
-                        <div style="border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto;"></div>
-                        <p style="margin-top: 20px; color: #666;">A carregar QR Code...</p>
-                    </div>
-                </div>
+                <!-- Container do QR Code -->
+                <div id="qr_${workerData.id}" style="width: 250px; height: 250px; margin: 20px auto;"></div>
                 
                 <!-- Informações do trabalhador -->
                 <div style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
                     <p><strong>Nome:</strong> ${workerData.name}</p>
                     <p><strong>Função:</strong> ${workerData.role}</p>
                     <p><strong>PIN:</strong> ${workerData.pin}</p>
-                    <p><small style="color: #666;">Use o PIN ou escaneie o QR Code para login</small></p>
-                </div>
-                
-                <!-- Mensagem de erro (inicialmente oculta) -->
-                <div id="qrError_${workerData.id}" style="display: none; margin-top: 15px; padding: 10px; background: #f8d7da; color: #721c24; border-radius: 5px;">
-                    ⚠️ Erro ao gerar QR Code. Use o PIN para fazer login.
                 </div>
             </div>
             <div class="modal-footer">
                 <button class="btn btn-secondary close-modal">Fechar</button>
-                <button class="btn btn-primary" id="btnPrintQR_${workerData.id}">🖨️ Imprimir</button>
-                <button class="btn btn-success" id="btnRegenerateQR_${workerData.id}">🔄 Gerar Novo QR Code</button>
+                <button class="btn btn-success" id="regenerate_${workerData.id}">🔄 Gerar Novamente</button>
             </div>
         </div>
     `;
     
     document.getElementById('modalContainer').appendChild(modal);
     
-    const qrContainerId = `workerQRCode_${workerData.id}`;
-    const errorContainerId = `qrError_${workerData.id}`;
+    const container = document.getElementById(`qr_${workerData.id}`);
+    const qrData = `CHECKPOINT:PIN:${workerData.pin}`;
     
-    // FUNÇÃO PARA LIMPAR O QR CODE ANTERIOR
-    const destroyQRCode = () => {
-        const container = document.getElementById(qrContainerId);
-        if (container) {
-            while (container.firstChild) {
-                container.removeChild(container.firstChild);
-            }
-        }
-    };
-    
-    // FUNÇÃO PARA GERAR O QR CODE - COM FALLBACK GARANTIDO
-    const generateQRCode = () => {
-        const container = document.getElementById(qrContainerId);
-        const errorContainer = document.getElementById(errorContainerId);
-        
-        if (!container) return false;
-        
+    // FUNÇÃO PARA TENTAR GERAR QR CODE
+    const tryGenerateQR = () => {
         // Limpar container
-        destroyQRCode();
+        container.innerHTML = '';
         
-        // Mostrar loading novamente enquanto tenta gerar
-        container.innerHTML = `
-            <div style="text-align: center; padding: 100px 0;">
-                <div style="border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto;"></div>
-                <p style="margin-top: 20px; color: #666;">A gerar QR Code...</p>
-            </div>
-        `;
+        // Mostrar loading
+        container.innerHTML = '<div style="text-align: center; padding: 100px 0;">⏳ A gerar...</div>';
         
-        try {
-            // CRIAR QR DATA MANUALMENTE
-            const qrData = `CHECKPOINT:PIN:${workerData.pin}|NAME:${workerData.name}|ROLE:${workerData.role}`;
-            
-            console.log('📊 QR Data a ser gerado:', qrData);
-            
-            // VERIFICAÇÃO CRÍTICA: Aguardar biblioteca carregar
-            const attemptGenerate = () => {
-                if (typeof QRCode !== 'undefined') {
-                    try {
-                        // Limpar loading
-                        container.innerHTML = '';
-                        
-                        // CRIAR NOVA INSTÂNCIA
-                        new QRCode(container, {
-                            text: qrData,
-                            width: 250,
-                            height: 250,
-                            colorDark: "#000000",
-                            colorLight: "#ffffff",
-                            correctLevel: QRCode.CorrectLevel.H
-                        });
-                        
-                        console.log(`✅ QR Code gerado para ${workerData.name}`);
-                        if (errorContainer) errorContainer.style.display = 'none';
-                        
-                        // Verificar se gerou corretamente
-                        setTimeout(() => {
-                            if (container.children.length === 0) {
-                                console.warn('⚠️ Container vazio após geração');
-                                showFallback();
-                            }
-                        }, 100);
-                        
-                        return true;
-                        
-                    } catch (qrError) {
-                        console.error('Erro na biblioteca QRCode:', qrError);
-                        showFallback();
-                        return false;
-                    }
-                } else {
-                    console.warn('⏳ QRCode ainda não carregado, tentando novamente...');
-                    setTimeout(attemptGenerate, 200);
-                    return false;
-                }
-            };
-            
-            // Função de fallback
-            const showFallback = () => {
-                container.innerHTML = `
-                    <div style="width: 250px; height: 250px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; border-radius: 10px; margin: 0 auto;">
-                        <div style="text-align: center; color: white;">
-                            <span style="font-size: 48px;">🔑</span>
-                            <p style="margin: 10px 0 5px; font-size: 18px;">Use o PIN</p>
-                            <p style="font-size: 32px; font-weight: bold; letter-spacing: 5px;">${workerData.pin}</p>
-                            <p style="font-size: 12px; opacity: 0.8;">para fazer login</p>
-                        </div>
-                    </div>
-                `;
-                if (errorContainer) errorContainer.style.display = 'none'; // Esconder erro, mostrar fallback bonito
-            };
-            
-            // Tentar gerar
-            attemptGenerate();
-            
-        } catch (error) {
-            console.error('❌ Erro ao gerar QR Code:', error);
-            
-            // Fallback visual
-            container.innerHTML = `
-                <div style="width: 250px; height: 250px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; border-radius: 10px; margin: 0 auto;">
-                    <div style="text-align: center; color: white;">
-                        <span style="font-size: 48px;">🔑</span>
-                        <p style="margin: 10px 0 5px; font-size: 18px;">Use o PIN</p>
-                        <p style="font-size: 32px; font-weight: bold; letter-spacing: 5px;">${workerData.pin}</p>
-                        <p style="font-size: 12px; opacity: 0.8;">para fazer login</p>
-                    </div>
-                </div>
-            `;
-            if (errorContainer) errorContainer.style.display = 'none';
+        // Verificar se a biblioteca está disponível
+        if (typeof QRCode !== 'undefined') {
+            try {
+                // Limpar loading
+                container.innerHTML = '';
+                
+                // Criar QR Code
+                new QRCode(container, {
+                    text: qrData,
+                    width: 250,
+                    height: 250,
+                    colorDark: "#000000",
+                    colorLight: "#ffffff",
+                    correctLevel: QRCode.CorrectLevel.H
+                });
+                
+                console.log('✅ QR Code gerado com sucesso');
+                return true;
+                
+            } catch (error) {
+                console.error('❌ Erro ao gerar QR Code:', error);
+                showFallback();
+                return false;
+            }
+        } else {
+            console.warn('⚠️ QRCode não disponível');
+            showFallback();
             return false;
         }
     };
     
-    // Adicionar estilo de animação
-    const style = document.createElement('style');
-    style.textContent = `
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-    `;
-    document.head.appendChild(style);
+    // FUNÇÃO DE FALLBACK
+    const showFallback = () => {
+        container.innerHTML = `
+            <div style="width: 250px; height: 250px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; border-radius: 10px; margin: 0 auto;">
+                <div style="text-align: center; color: white;">
+                    <div style="font-size: 48px; margin-bottom: 10px;">🔑</div>
+                    <div style="font-size: 18px; margin-bottom: 5px;">Use o PIN</div>
+                    <div style="font-size: 32px; font-weight: bold; letter-spacing: 5px; margin-bottom: 5px;">${workerData.pin}</div>
+                    <div style="font-size: 12px; opacity: 0.8;">para fazer login</div>
+                </div>
+            </div>
+        `;
+    };
     
-    // Fechar modal com botões X
+    // CARREGAR BIBLIOTECA E GERAR
+    this.loadQRCodeLibrary().then(() => {
+        // Pequeno delay para garantir
+        setTimeout(() => {
+            tryGenerateQR();
+        }, 100);
+    }).catch(() => {
+        showFallback();
+    });
+    
+    // Botão regenerar
+    const btnRegenerate = document.getElementById(`regenerate_${workerData.id}`);
+    if (btnRegenerate) {
+        btnRegenerate.addEventListener('click', () => {
+            tryGenerateQR();
+        });
+    }
+    
+    // Fechar modal
     modal.querySelectorAll('.close-modal').forEach(btn => {
         btn.addEventListener('click', () => {
-            destroyQRCode();
             this.closeModal(modal);
         });
     });
     
-    // Garantir que a biblioteca está carregada antes de gerar
-    this.loadQRCodeLibrary().then(() => {
-        generateQRCode();
-    }).catch(() => {
-        // Se falhar ao carregar, mostrar fallback imediatamente
-        const container = document.getElementById(qrContainerId);
-        if (container) {
-            container.innerHTML = `
-                <div style="width: 250px; height: 250px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; border-radius: 10px; margin: 0 auto;">
-                    <div style="text-align: center; color: white;">
-                        <span style="font-size: 48px;">🔑</span>
-                        <p style="margin: 10px 0 5px; font-size: 18px;">Use o PIN</p>
-                        <p style="font-size: 32px; font-weight: bold; letter-spacing: 5px;">${workerData.pin}</p>
-                        <p style="font-size: 12px; opacity: 0.8;">para fazer login</p>
-                    </div>
-                </div>
-            `;
-        }
-    });
-    
-    // Botão para gerar NOVO QR Code
-    const btnRegenerateQR = modal.querySelector(`#btnRegenerateQR_${workerData.id}`);
-    if (btnRegenerateQR) {
-        btnRegenerateQR.addEventListener('click', () => {
-            generateQRCode();
-            window.PontoApp?.showNotification('A gerar novo QR Code...', 'info');
-        });
-    }
-    
-    // Botão para imprimir
-    const btnPrintQR = modal.querySelector(`#btnPrintQR_${workerData.id}`);
-    if (btnPrintQR) {
-        btnPrintQR.addEventListener('click', () => {
-            this.printQR(workerData.name, workerData.pin, workerData.role);
-        });
-    }
-    
-    // Fechar modal clicando fora
     modal.addEventListener('click', (e) => {
         if (e.target === modal) {
-            destroyQRCode();
             this.closeModal(modal);
         }
     });
@@ -4814,47 +4705,65 @@ async showWorkerQR(worker) {
     }
     }
 	
-    // admin.js - Substitua a função loadQRCodeLibrary
+// admin.js - Versão SIMPLIFICADA e GARANTIDA
 loadQRCodeLibrary() {
     return new Promise((resolve, reject) => {
-        // Se já está carregado, resolver imediatamente
+        // Verificar se já está carregado
         if (typeof QRCode !== 'undefined') {
-            console.log('✅ QRCode library já carregada');
+            console.log('✅ QRCode já carregado');
             resolve();
             return;
         }
         
-        console.log('📥 Carregando biblioteca QRCode...');
+        console.log('📥 A carregar biblioteca QRCode...');
         
-        // Verificar se o script já foi adicionado
-        if (document.querySelector('script[src*="qrcodejs"]')) {
-            // Aguardar carregamento
-            const checkInterval = setInterval(() => {
-                if (typeof QRCode !== 'undefined') {
-                    clearInterval(checkInterval);
-                    console.log('✅ QRCode library carregada (script existente)');
-                    resolve();
+        // CARREGAR DE MÚLTIPLAS FONTES para garantir
+        const scripts = [
+            'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js',
+            'https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js'
+        ];
+        
+        let loaded = false;
+        let attempts = 0;
+        
+        const tryLoad = (index) => {
+            if (index >= scripts.length) {
+                console.error('❌ Todas as tentativas falharam');
+                reject(new Error('Falha ao carregar QRCode'));
+                return;
+            }
+            
+            const script = document.createElement('script');
+            script.src = scripts[index];
+            script.async = true;
+            
+            script.onload = () => {
+                console.log(`✅ QRCode carregado de: ${scripts[index]}`);
+                loaded = true;
+                resolve();
+            };
+            
+            script.onerror = () => {
+                console.warn(`⚠️ Falha ao carregar de: ${scripts[index]}`);
+                if (!loaded) {
+                    tryLoad(index + 1);
                 }
-            }, 100);
-            return;
-        }
-        
-        // Criar e adicionar o script
-        const script = document.createElement('script');
-        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
-        script.async = true;
-        
-        script.onload = () => {
-            console.log('✅ QRCode library carregada com sucesso');
-            resolve();
+            };
+            
+            document.head.appendChild(script);
         };
         
-        script.onerror = () => {
-            console.error('❌ Erro ao carregar QRCode library');
-            reject(new Error('Falha ao carregar biblioteca QRCode'));
-        };
+        // Iniciar tentativas
+        tryLoad(0);
         
-        document.head.appendChild(script);
+        // Timeout de segurança
+        setTimeout(() => {
+            if (!loaded && typeof QRCode === 'undefined') {
+                console.warn('⏰ Timeout - a usar fallback');
+                // Não rejeitar, apenas continuar com fallback
+                resolve(); // Resolver mesmo assim para não bloquear
+            }
+        }, 5000);
     });
 }
 
