@@ -4202,56 +4202,142 @@ class AdminInterface {
         }
     }
 
-    showWorkerQR(worker) {
-        console.log('Mostrando QR Code para:', worker.name);
-        
-        const modal = document.createElement('div');
-        modal.className = 'modal active';
-        modal.innerHTML = `
-            <div class="modal-content" style="max-width: 400px;">
-                <div class="modal-header">
-                    <h3>QR Code - ${worker.name}</h3>
-                    <button class="btn btn-small btn-close close-modal">×</button>
+// admin.js - Função showWorkerQR CORRIGIDA E COMPLETA
+showWorkerQR(worker) {
+    console.log('Mostrando QR Code para:', worker.name);
+    
+    const modal = document.createElement('div');
+    modal.className = 'modal active';
+    modal.innerHTML = `
+        <div class="modal-content" style="max-width: 400px;">
+            <div class="modal-header">
+                <h3>QR Code - ${worker.name}</h3>
+                <button class="btn btn-small btn-close close-modal">×</button>
+            </div>
+            <div class="modal-body" style="text-align: center;">
+                <!-- Container do QR Code -->
+                <div id="workerQRCode" style="width: 250px; height: 250px; margin: 20px auto;"></div>
+                
+                <!-- Informações do trabalhador -->
+                <div style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                    <p><strong>Nome:</strong> ${worker.name}</p>
+                    <p><strong>Função:</strong> ${worker.role}</p>
+                    <p><strong>PIN:</strong> ${worker.pin}</p>
+                    <p><small style="color: #666;">Use o PIN ou escaneie o QR Code para login</small></p>
                 </div>
-                <div class="modal-body" style="text-align: center;">
-                    <div id="workerQRCode" style="width: 250px; height: 250px; margin: 20px auto;"></div>
-                    <div style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
-                        <p><strong>Nome:</strong> ${worker.name}</p>
-                        <p><strong>Função:</strong> ${worker.role}</p>
-                        <p><strong>PIN:</strong> ${worker.pin}</p>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button class="btn btn-secondary close-modal">Fechar</button>
-                    <button class="btn btn-primary" id="btnPrintQR">🖨️ Imprimir</button>
+                
+                <!-- Mensagem de erro (inicialmente oculta) -->
+                <div id="qrError" style="display: none; margin-top: 15px; padding: 10px; background: #f8d7da; color: #721c24; border-radius: 5px;">
+                    ⚠️ Erro ao gerar QR Code. Use o PIN para fazer login.
                 </div>
             </div>
-        `;
+            <div class="modal-footer">
+                <button class="btn btn-secondary close-modal">Fechar</button>
+                <button class="btn btn-primary" id="btnPrintQR">🖨️ Imprimir</button>
+                <button class="btn btn-success" id="btnRegenerateQR">🔄 Gerar Novo QR Code</button>
+            </div>
+        </div>
+    `;
+    
+    document.getElementById('modalContainer').appendChild(modal);
+    
+    // Fechar modal com botões X
+    modal.querySelectorAll('.close-modal').forEach(btn => {
+        btn.addEventListener('click', () => this.closeModal(modal));
+    });
+    
+    // Função para gerar o QR Code
+    const generateQRCode = () => {
+        const qrContainer = document.getElementById('workerQRCode');
+        const errorContainer = document.getElementById('qrError');
         
-        document.getElementById('modalContainer').appendChild(modal);
+        // Limpar conteúdo anterior
+        qrContainer.innerHTML = '';
+        errorContainer.style.display = 'none';
         
-        modal.querySelectorAll('.close-modal').forEach(btn => {
-    btn.addEventListener('click', () => this.closeModal(modal));
-});
-        
-        setTimeout(() => {
-            window.PontoApp.generateQRCodeElement(worker.id, 'workerQRCode', 250);
-        }, 100);
-        
-        const btnPrintQR = modal.querySelector('#btnPrintQR');
-        if (btnPrintQR) {
-            btnPrintQR.addEventListener('click', () => {
-                this.printQR(worker.name, worker.pin, worker.role);
-            });
-        }
-        
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) {
-                this.closeModal(modal);
+        try {
+            // Verificar se PontoApp existe
+            if (!window.PontoApp) {
+                throw new Error('PontoApp não inicializado');
             }
+            
+            // Tentar gerar QR Code
+            const success = window.PontoApp.generateQRCodeElement(worker.id, 'workerQRCode', 250);
+            
+            if (!success) {
+                // Se falhou, mostrar fallback
+                qrContainer.innerHTML = `
+                    <div style="width: 250px; height: 250px; background: #f0f0f0; display: flex; align-items: center; justify-content: center; border-radius: 10px; margin: 0 auto; border: 2px dashed #ccc;">
+                        <div style="text-align: center;">
+                            <span style="font-size: 48px;">📱</span>
+                            <p style="color: #666; margin-top: 10px;">
+                                QR Code temporário<br>
+                                <strong style="font-size: 24px;">${worker.pin}</strong>
+                            </p>
+                        </div>
+                    </div>
+                `;
+            }
+        } catch (error) {
+            console.error('Erro ao gerar QR Code:', error);
+            
+            // Mostrar mensagem de erro
+            errorContainer.style.display = 'block';
+            
+            // Mostrar fallback
+            qrContainer.innerHTML = `
+                <div style="width: 250px; height: 250px; background: #f0f0f0; display: flex; align-items: center; justify-content: center; border-radius: 10px; margin: 0 auto; border: 2px dashed #e74c3c;">
+                    <div style="text-align: center;">
+                        <span style="font-size: 48px;">⚠️</span>
+                        <p style="color: #666; margin-top: 10px;">
+                            Use o PIN para login<br>
+                            <strong style="font-size: 24px;">${worker.pin}</strong>
+                        </p>
+                    </div>
+                </div>
+            `;
+        }
+    };
+    
+    // Gerar QR Code após um pequeno delay
+    setTimeout(() => {
+        generateQRCode();
+    }, 100);
+    
+    // Botão para gerar NOVO QR Code
+    const btnRegenerateQR = modal.querySelector('#btnRegenerateQR');
+    if (btnRegenerateQR) {
+        btnRegenerateQR.addEventListener('click', () => {
+            // Mostrar loading
+            const qrContainer = document.getElementById('workerQRCode');
+            qrContainer.innerHTML = '<div style="text-align: center; padding: 100px 0;">🔄 Gerando novo QR Code...</div>';
+            
+            // Regenerar após pequeno delay
+            setTimeout(() => {
+                generateQRCode();
+                if (window.PontoApp && window.PontoApp.showNotification) {
+                    window.PontoApp.showNotification('Novo QR Code gerado!', 'success');
+                }
+            }, 300);
         });
     }
-
+    
+    // Botão para imprimir
+    const btnPrintQR = modal.querySelector('#btnPrintQR');
+    if (btnPrintQR) {
+        btnPrintQR.addEventListener('click', () => {
+            this.printQR(worker.name, worker.pin, worker.role);
+        });
+    }
+    
+    // Fechar modal clicando fora
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            this.closeModal(modal);
+        }
+    });
+}
+        
     exportBackupExcel() {
         console.log('Exportando backup para Excel...');
         

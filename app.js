@@ -1242,52 +1242,72 @@ resetAllData() {
         return `CHECKPOINT:PIN:${worker.pin}|NAME:${worker.name}|ROLE:${worker.role}`;
     }
 
-    generateQRCodeElement(workerId, elementId, size = 200) {
-        const worker = this.workers.find(w => w.id === workerId);
-        if (!worker) return null;
-        
-        const qrData = this.generateQRCode(workerId);
-        const container = document.getElementById(elementId);
-        
-        if (!container) return null;
-        
-        container.innerHTML = '';
-        
-        if (typeof QRCode !== 'undefined') {
-            try {
-                new QRCode(container, {
-                    text: qrData,
-                    width: size,
-                    height: size,
-                    colorDark: "#000000",
-                    colorLight: "#ffffff",
-                    correctLevel: QRCode.CorrectLevel.H
-                });
-                return true;
-            } catch (error) {
-                console.error('Erro ao gerar QR Code:', error);
-                container.innerHTML = `
-                    <div style="width: ${size}px; height: ${size}px; background: #f0f0f0; display: flex; align-items: center; justify-content: center; border-radius: 10px; margin: 0 auto;">
-                        <p style="color: #666; text-align: center;">
-                            Erro ao gerar QR Code<br>
-                            <small>PIN: ${worker.pin}</small>
-                        </p>
-                    </div>
-                `;
-                return false;
-            }
-        } else {
+    // app.js - Método generateQRCodeElement MELHORADO
+generateQRCodeElement(workerId, elementId, size = 200) {
+    const worker = this.workers.find(w => w.id === workerId);
+    if (!worker) {
+        console.error('❌ Trabalhador não encontrado para gerar QR Code');
+        return false;
+    }
+    
+    const qrData = this.generateQRCode(workerId);
+    const container = document.getElementById(elementId);
+    
+    if (!container) {
+        console.error('❌ Container não encontrado para QR Code:', elementId);
+        return false;
+    }
+    
+    // Limpar container
+    container.innerHTML = '';
+    
+    // Verificar se a biblioteca QRCode está carregada
+    if (typeof QRCode !== 'undefined') {
+        try {
+            // Criar novo QR Code
+            new QRCode(container, {
+                text: qrData,
+                width: size,
+                height: size,
+                colorDark: "#000000",
+                colorLight: "#ffffff",
+                correctLevel: QRCode.CorrectLevel.H
+            });
+            
+            console.log(`✅ QR Code gerado para ${worker.name}`);
+            return true;
+            
+        } catch (error) {
+            console.error('❌ Erro ao gerar QR Code:', error);
+            
+            // Fallback visual
             container.innerHTML = `
-                <div style="width: ${size}px; height: ${size}px; background: #f0f0f0; display: flex; align-items: center; justify-content: center; border-radius: 10px; margin: 0 auto;">
-                    <p style="color: #666; text-align: center;">
-                        QR Code não disponível<br>
-                        <small>PIN: ${worker.pin}</small>
-                    </p>
+                <div style="width: ${size}px; height: ${size}px; background: #f8f9fa; display: flex; align-items: center; justify-content: center; border-radius: 10px; margin: 0 auto; border: 2px solid #dee2e6;">
+                    <div style="text-align: center;">
+                        <span style="font-size: 40px;">📱</span>
+                        <p style="color: #495057; margin: 10px 0 5px;"><strong>PIN: ${worker.pin}</strong></p>
+                        <p style="color: #6c757d; font-size: 12px;">Use o PIN para login</p>
+                    </div>
                 </div>
             `;
             return false;
         }
+    } else {
+        console.warn('⚠️ Biblioteca QRCode não carregada');
+        
+        // Fallback quando biblioteca não está disponível
+        container.innerHTML = `
+            <div style="width: ${size}px; height: ${size}px; background: #f8f9fa; display: flex; align-items: center; justify-content: center; border-radius: 10px; margin: 0 auto; border: 2px solid #dee2e6;">
+                <div style="text-align: center;">
+                    <span style="font-size: 40px;">🔑</span>
+                    <p style="color: #495057; margin: 10px 0 5px;"><strong>PIN: ${worker.pin}</strong></p>
+                    <p style="color: #6c757d; font-size: 12px;">Use o PIN para login</p>
+                </div>
+            </div>
+        `;
+        return false;
     }
+}
 
     // MODIFICADO: registerPunch - Forçar atualização após registo
     registerPunch(workerId, type) {
