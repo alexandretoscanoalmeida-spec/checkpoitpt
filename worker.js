@@ -18,6 +18,38 @@ class WorkerInterface {
     this.init();
 }
 
+// ===== FUNÇÃO PARA CARREGAR BIBLIOTECA QRCODE (IGUAL AO ADMIN) =====
+loadQRCodeLibrary() {
+    return new Promise((resolve, reject) => {
+        // Verificar se já está carregada
+        if (typeof QRCode !== 'undefined') {
+            console.log('✅ QRCode library já disponível');
+            resolve();
+            return;
+        }
+        
+        console.log('📥 A carregar biblioteca QRCode...');
+        
+        // Criar script element
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js';
+        script.async = true;
+        
+        script.onload = () => {
+            console.log('✅ QRCode library carregada com sucesso');
+            // Pequeno delay para garantir inicialização
+            setTimeout(resolve, 100);
+        };
+        
+        script.onerror = () => {
+            console.error('❌ Erro ao carregar QRCode library');
+            reject(new Error('Falha ao carregar biblioteca QRCode'));
+        };
+        
+        document.head.appendChild(script);
+    });
+}
+
 // worker.js - ADICIONAR ESTE MÉTODO init() COMPLETO
 init() {
     console.log("Inicializando WorkerInterface...");
@@ -458,40 +490,140 @@ init() {
         });
     }
 
-    toggleQRCode() {
-        const container = document.getElementById('qrcodeContainer');
-        const button = document.getElementById('btnViewQR');
+    async toggleQRCode() {
+    console.log('📱 A gerar QR Code para:', this.currentWorker.name);
+    
+    const container = document.getElementById('qrcodeContainer');
+    const button = document.getElementById('btnViewQR');
+    
+    if (!container || !button) return;
+    
+    if (container.style.display === 'none' || container.style.display === '') {
+        container.style.display = 'block';
+        button.textContent = '🙈 Ocultar QR Code';
         
-        if (!container || !button) return;
+        // Mostrar loading
+        container.innerHTML = '<div style="text-align: center; padding: 20px;">⏳ A gerar QR Code...</div>';
         
-        if (container.style.display === 'none' || container.style.display === '') {
-            container.style.display = 'block';
-            button.textContent = '🙈 Ocultar QR Code';
-            
+        // ===== PASSO 1: RECARREGAR DADOS DO TRABALHADOR =====
+        console.log('🔄 A buscar dados mais recentes do trabalhador...');
+        
+        const workersData = localStorage.getItem('ponto_workers');
+        if (workersData) {
+            try {
+                const workers = JSON.parse(workersData);
+                const workerAtualizado = workers.find(w => w.id === this.currentWorker.id);
+                
+                if (workerAtualizado) {
+                    console.log('✅ Dados atualizados encontrados!');
+                    console.log('   PIN antigo:', this.currentWorker.pin);
+                    console.log('   PIN novo:', workerAtualizado.pin);
+                    
+                    this.currentWorker = workerAtualizado;
+                    sessionStorage.setItem('currentUser', JSON.stringify(workerAtualizado));
+                    document.getElementById('workerName').textContent = workerAtualizado.name;
+                    document.getElementById('workerRole').textContent = workerAtualizado.role;
+                }
+            } catch (e) {
+                console.error('❌ Erro ao ler workers:', e);
+            }
+        }
+        
+        // ===== PASSO 2: PREPARAR DADOS (MESMO FORMATO DO ADMIN) =====
+        const workerData = {
+            id: this.currentWorker.id,
+            name: this.currentWorker.name || 'Trabalhador',
+            pin: this.currentWorker.pin ? 
+                this.currentWorker.pin.toString().padStart(4, '0') : 
+                this.currentWorker.id.toString().padStart(4, '0'),
+            role: this.currentWorker.role || 'Sem Função'
+        };
+        
+        console.log('📱 A gerar QR Code com PIN:', workerData.pin);
+        
+        // ===== PASSO 3: DEFINIR DADOS DO QR CODE (MESMO FORMATO) =====
+        const qrData = `CHECKPOINT:PIN:${workerData.pin}`;
+        
+        // ===== PASSO 4: FUNÇÃO PARA GERAR QR CODE (IGUAL AO ADMIN) =====
+        const generateQR = () => {
+            // Limpar container
             container.innerHTML = '';
             
-            // Usar a função do PontoApp para gerar QR Code real
-            if (window.PontoApp) {
-                window.PontoApp.generateQRCodeElement(this.currentWorker.id, 'qrcodeContainer', 200);
+            if (typeof QRCode !== 'undefined') {
+                try {
+                    // Usar canvas (igual ao admin)
+                    const canvas = document.createElement('canvas');
+                    
+                    QRCode.toCanvas(canvas, qrData, {
+                        width: 250,
+                        margin: 2,
+                        color: {
+                            dark: '#000000',
+                            light: '#ffffff'
+                        }
+                    }, (error) => {
+                        if (error) {
+                            console.error('❌ Erro ao gerar QR Code:', error);
+                            this.showQRFallback(container, workerData);
+                        } else {
+                            // Adicionar canvas
+                            container.appendChild(canvas);
+                            
+                            // Adicionar informações (igual ao admin mas com data/hora)
+                            const infoDiv = document.createElement('div');
+                            infoDiv.style.marginTop = '15px';
+                            infoDiv.style.padding = '15px';
+                            infoDiv.style.background = '#f8f9fa';
+                            infoDiv.style.borderRadius = '8px';
+                            infoDiv.style.textAlign = 'left';
+                            
+                            const agora = new Date();
+                            const horaAtual = agora.toLocaleTimeString('pt-PT');
+                            const dataAtual = agora.toLocaleDateString('pt-PT');
+                            
+                            infoDiv.innerHTML = `
+                                <p><strong>Nome:</strong> ${workerData.name}</p>
+                                <p><strong>Função:</strong> ${workerData.role}</p>
+                                <p><strong>PIN:</strong> ${workerData.pin}</p>
+                                <p style="color: #28a745; font-size: 12px; margin-top: 10px; border-top: 1px solid #dee2e6; padding-top: 10px;">
+                                    ✅ Dados atualizados: ${dataAtual} ${horaAtual}
+                                </p>
+                            `;
+                            container.appendChild(infoDiv);
+                            
+                            console.log('✅ QR Code gerado com sucesso');
+                        }
+                    });
+                    
+                } catch (error) {
+                    console.error('❌ Erro:', error);
+                    this.showQRFallback(container, workerData);
+                }
             } else {
-                // Fallback apenas se PontoApp não existir
-                container.innerHTML = `
-                    <div style="text-align: center; padding: 20px; background: white; border-radius: 10px;">
-                        <p>PIN: ${this.currentWorker.pin}</p>
-                        <p style="color: #666;">Use este PIN para login</p>
-                    </div>
-                `;
+                console.warn('⚠️ QRCode não disponível');
+                this.showQRFallback(container, workerData);
             }
-            
-            container.style.animation = 'fadeIn 0.3s ease';
-            
-            console.log("QR Code mostrado com sucesso");
-        } else {
-            container.style.display = 'none';
-            button.textContent = '📱 Ver Meu QR Code';
-            console.log("QR Code ocultado");
+        };
+        
+        // ===== PASSO 5: FUNÇÃO DE FALLBACK (MESMO ESTILO DO ADMIN) =====
+        // (Já existe a função showQRFallback, vamos usá-la)
+        
+        // ===== PASSO 6: CARREGAR BIBLIOTECA E GERAR (IGUAL AO ADMIN) =====
+        try {
+            await this.loadQRCodeLibrary();
+            generateQR();
+        } catch (error) {
+            console.error('❌ Erro ao carregar biblioteca:', error);
+            this.showQRFallback(container, workerData);
         }
+        
+        container.style.animation = 'fadeIn 0.3s ease';
+        
+    } else {
+        container.style.display = 'none';
+        button.textContent = '📱 Ver Meu QR Code';
     }
+}
 
     loadAllRegistries() {
         console.log("Carregando todos os registros...");
@@ -1007,6 +1139,31 @@ showWeekInfo(semana, ano, nomeHorario) {
         
         console.log(`✅ Banco de horas carregado: ${history.length} movimentos`);
     }
+	
+showQRFallback(container, workerData) {
+    const agora = new Date();
+    const horaAtual = agora.toLocaleTimeString('pt-PT');
+    const dataAtual = agora.toLocaleDateString('pt-PT');
+    
+    container.innerHTML = `
+        <div style="width: 250px; height: 250px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; border-radius: 10px; margin: 0 auto;">
+            <div style="text-align: center; color: white;">
+                <div style="font-size: 48px; margin-bottom: 10px;">🔑</div>
+                <div style="font-size: 18px; margin-bottom: 5px;">Use o PIN</div>
+                <div style="font-size: 32px; font-weight: bold; letter-spacing: 5px; margin-bottom: 5px;">${workerData.pin}</div>
+                <div style="font-size: 12px; opacity: 0.8;">para fazer login</div>
+            </div>
+        </div>
+        <div style="margin-top: 15px; padding: 15px; background: #f8f9fa; border-radius: 8px; text-align: left;">
+            <p><strong>Nome:</strong> ${workerData.name}</p>
+            <p><strong>Função:</strong> ${workerData.role}</p>
+            <p><strong>PIN:</strong> ${workerData.pin}</p>
+            <p style="color: #28a745; font-size: 12px; margin-top: 10px; border-top: 1px solid #dee2e6; padding-top: 10px;">
+                ✅ Dados atualizados: ${dataAtual} ${horaAtual}
+            </p>
+        </div>
+    `;
+}
 }
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -1026,4 +1183,5 @@ if (document.readyState === 'complete' || document.readyState === 'interactive')
     setTimeout(() => {
         window.workerApp = new WorkerInterface();
     }, 100);
+	
 }
