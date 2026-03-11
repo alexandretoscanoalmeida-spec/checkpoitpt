@@ -50,7 +50,6 @@ loadQRCodeLibrary() {
     });
 }
 
-// worker.js - ADICIONAR ESTE MÉTODO init() COMPLETO
 init() {
     console.log("Inicializando WorkerInterface...");
     
@@ -64,23 +63,46 @@ init() {
     this.loadAllRegistries();
     this.loadBankHours();
     
-    // ADICIONAR ESTA LINHA:
-    this.loadMySchedule(); // Carregar horário da semana atual
+    this.loadMySchedule();
     
     // Verificar mudança de semana automaticamente
     setInterval(() => {
         const hoje = new Date();
         const semanaAtual = this.getWeekNumber(hoje);
         
-        // Se a semana mudou desde a última verificação
         if (this.ultimaSemana !== semanaAtual) {
             console.log(`📅 Semana mudou de ${this.ultimaSemana} para ${semanaAtual}. Recarregando horário...`);
             this.loadMySchedule();
             this.ultimaSemana = semanaAtual;
         }
-    }, 3600000); // Verificar a cada hora
+    }, 3600000);
+    
+    // 🔴 NOVO: Iniciar monitoramento de registros
+    this.startRegistryMonitoring();
     
     console.log("WorkerInterface inicializado com sucesso");
+}
+
+startRegistryMonitoring() {
+    console.log("👁️ Iniciando monitoramento de registros...");
+    
+    // ALTERADO: de 2000 para 100ms
+    setInterval(() => {
+        this.checkLastRegistry();
+    }, 100);  // ← MUDAR AQUI
+    
+    // Manter os event listeners existentes
+    window.addEventListener('focus', () => {
+        console.log("🪟 Janela reativada - verificando registros");
+        this.checkLastRegistry();
+    });
+    
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) {
+            console.log("📄 Página visível novamente - verificando registros");
+            this.checkLastRegistry();
+        }
+    });
 }
 
     loadWorkerData() {
@@ -341,21 +363,46 @@ init() {
     }
 
     registerPunch(type) {
-        console.log(`Registrando ponto: ${type}`);
-        
-        if (!window.PontoApp) {
-            this.showNotification("Erro: Aplicação não inicializada!", 'error');
-            return;
-        }
-        
-        const registry = window.PontoApp.registerPunch(this.currentWorker.id, type);
-        
-        const typeText = this.getPunchTypeText(type);
-        this.showNotification(`${typeText} registrado às ${registry.time}`, "success");
-        
-        this.updateTodayRegistries();
-        this.checkLastRegistry();
+    console.log(`Registrando ponto: ${type}`);
+    
+    if (!window.PontoApp) {
+        this.showNotification("Erro: Aplicação não inicializada!", 'error');
+        return;
     }
+    
+    // 🔴 NOVO: Desabilitar o botão clicado IMEDIATAMENTE
+    const buttonMap = {
+        'in': 'btnIn',
+        'break_start': 'btnBreakStart',
+        'break_end': 'btnBreakEnd',
+        'out': 'btnOut'
+    };
+    
+    const buttonId = buttonMap[type];
+    if (buttonId) {
+        const btn = document.getElementById(buttonId);
+        if (btn) {
+            btn.disabled = true;
+            btn.style.opacity = '0.5';
+            btn.style.cursor = 'not-allowed';
+            console.log(`🔴 Botão ${buttonId} desabilitado imediatamente`);
+        }
+    }
+       
+    const registry = window.PontoApp.registerPunch(this.currentWorker.id, type);
+    
+    const typeText = this.getPunchTypeText(type);
+    this.showNotification(`${typeText} registrado às ${registry.time}`, "success");
+    
+    this.updateTodayRegistries();
+    this.checkLastRegistry(); // Já existe
+    
+    // 🔴 NOVO: Forçar verificação extra após 100ms
+    setTimeout(() => {
+        console.log("⏱️ Verificação extra após registro");
+        this.checkLastRegistry();
+    }, 100);
+}
 
     getPunchTypeText(type) {
         const types = {
@@ -399,48 +446,79 @@ init() {
         }, 3000);
     }
 
-    checkLastRegistry() {
-        const today = new Date().toISOString().split('T')[0];
-        let registries = window.PontoApp?.registries || [];
-        registries = registries.filter(r => 
-            r.date === today && r.workerId === this.currentWorker.id
-        );
-        
-        if (registries.length === 0) {
-            this.enableButton('btnIn');
-            this.disableButton('btnBreakStart');
-            this.disableButton('btnBreakEnd');
-            this.disableButton('btnOut');
-        } else {
-            const last = registries[registries.length - 1];
-            switch(last.type) {
-                case 'in':
-                    this.disableButton('btnIn');
-                    this.enableButton('btnBreakStart');
-                    this.disableButton('btnBreakEnd');
-                    this.enableButton('btnOut');
-                    break;
-                case 'break_start':
-                    this.disableButton('btnIn');
-                    this.disableButton('btnBreakStart');
-                    this.enableButton('btnBreakEnd');
-                    this.disableButton('btnOut');
-                    break;
-                case 'break_end':
-                    this.disableButton('btnIn');
-                    this.enableButton('btnBreakStart');
-                    this.disableButton('btnBreakEnd');
-                    this.enableButton('btnOut');
-                    break;
-                case 'out':
-                    this.disableButton('btnIn');
-                    this.disableButton('btnBreakStart');
-                    this.disableButton('btnBreakEnd');
-                    this.disableButton('btnOut');
-                    break;
-            }
-        }
+// worker.js - VERSÃO DEFINITIVA COM PROTEÇÃO TOTAL
+checkLastRegistry() {
+    console.log("🔍 Verificando estado dos botões...");
+    
+    const today = new Date().toISOString().split('T')[0];
+    let registries = window.PontoApp?.registries || [];
+    
+    // Filtrar apenas registros de hoje deste trabalhador
+    const todayRegistries = registries.filter(r => 
+        r.date === today && r.workerId === this.currentWorker.id
+    ).sort((a, b) => a.timestamp - b.timestamp);
+    
+    // LOG PARA DEBUG
+    console.log(`📊 Registros de hoje (${todayRegistries.length}):`, 
+        todayRegistries.map(r => `${r.type} às ${r.time}`).join(' → '));
+    
+    // Verificar se já existe uma entrada E uma saída hoje
+    const hasEntry = todayRegistries.some(r => r.type === 'in');
+    const hasExit = todayRegistries.some(r => r.type === 'out');
+    
+    // REGRA DE NEGÓCIO CORRIGIDA:
+    // 1. Se não tem entrada: pode entrar
+    // 2. Se tem entrada E saída: NÃO pode fazer nada (dia completo)
+    // 3. Se tem entrada mas não tem saída: segue o fluxo normal
+    
+    // DESABILITAR TODOS OS BOTÕES PRIMEIRO (garantia)
+    this.disableButton('btnIn');
+    this.disableButton('btnBreakStart');
+    this.disableButton('btnBreakEnd');
+    this.disableButton('btnOut');
+    
+    if (!hasEntry) {
+        // Dia ainda não começou - só entrada disponível
+        console.log("✅ Nenhuma entrada hoje - ativando apenas botão Entrada");
+        this.enableButton('btnIn');
+        return;
     }
+    
+    if (hasEntry && hasExit) {
+        // Dia já foi finalizado - NADA disponível
+        console.log("⛔ Dia já finalizado com saída - todos os botões desativados");
+        // Já estão todos desativados pelo disable acima
+        return;
+    }
+    
+    // Tem entrada mas não tem saída - seguir fluxo normal baseado no último registro
+    const last = todayRegistries[todayRegistries.length - 1];
+    console.log(`📌 Último registro: ${last.type} às ${last.time}`);
+    
+    // Ativar apenas o botão apropriado baseado no último registro
+    switch(last.type) {
+        case 'in':
+            console.log("🟢 Após entrada: ativar Início Pausa e Saída");
+            this.enableButton('btnBreakStart');
+            this.enableButton('btnOut');
+            break;
+            
+        case 'break_start':
+            console.log("⏸️ Durante pausa: ativar apenas Fim Pausa");
+            this.enableButton('btnBreakEnd');
+            break;
+            
+        case 'break_end':
+            console.log("🟡 Após pausa: ativar Início Pausa e Saída");
+            this.enableButton('btnBreakStart');
+            this.enableButton('btnOut');
+            break;
+            
+        default:
+            console.log("⚠️ Estado desconhecido - ativar apenas Entrada");
+            this.enableButton('btnIn');
+    }
+}
 
     enableButton(buttonId) {
         const btn = document.getElementById(buttonId);
@@ -1178,10 +1256,3 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }, 100);
 });
-
-if (document.readyState === 'complete' || document.readyState === 'interactive') {
-    setTimeout(() => {
-        window.workerApp = new WorkerInterface();
-    }, 100);
-	
-}
